@@ -1,0 +1,15 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Optional clasp/local secrets
+.clasp.json
+.clasprc.json
+
+# Node (if added later)
+node_modules/
