@@ -1,0 +1,23 @@
+{
+  "name": "sportbud-meeting",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Google Apps Script na naplnenie Google Slides prezentacie zo zdrojoveho Google Sheetu pomocou pripravenej Slides sablony.",
+  "scripts": {
+    "clasp:setup": "powershell -ExecutionPolicy Bypass -File scripts/setup-clasp.ps1",
+    "clasp:login": "npx clasp login",
+    "clasp:status": "npx clasp status",
+    "clasp:push": "npx clasp push",
+    "clasp:pull": "npx clasp pull",
+    "clasp:open": "npx clasp open-script"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matuslong/sportbud-meeting.git"
+  },
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@google/clasp": "^3.0.6"
+  }
+}

@@ -1,0 +1,16 @@
+# Local config and auth
+.clasp.json
+.clasprc.json
+
+# Repo and tooling
+.git/**
+node_modules/**
+scripts/**
+README.md
+package.json
+package-lock.json
+.clasp.example.json
+.gitignore
+
+# Keep local .gs sources out of clasp pushes; push .js files instead
+*.gs
