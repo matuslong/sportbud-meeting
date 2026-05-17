@@ -19,20 +19,22 @@ Google Apps Script na naplnenie Google Slides prezentacie zo zdrojoveho Google S
 
 ## Konfiguracia sablony
 1. Do `Config.gs` nastav `TEMPLATE_PRESENTATION_ID` na ID tvojej master Google Slides sablony.
-2. V Slides sablone priprav 1 kompletny round block pre jedno cele kolo:
+2. V Slides sablone priprav 1 round block pre kazde kolo, ktore chces generovat.
+3. Kazdy round block musi obsahovat:
    - 2x topic slide s markerom `{{QUIZ_TOPIC_SLIDE}}`
    - 9x question slide s markerom `{{QUIZ_QUESTION_SLIDE}}`
-   - 1x staticky answer header slide bez markeru
+   - 0 alebo viac statickych promo slidov bez markerov
    - 9x answer slide s markerom `{{QUIZ_ANSWER_SLIDE}}`
-3. Poradie round bloku musi byt presne:
+4. Poradie v kazdom round bloku musi byt presne:
    - tema 1
    - otazky 1-4
    - tema 2
    - otazky 5-8
    - bonus otazka
-   - answer header
+   - lubovolny pocet statickych promo slidov
    - odpovede 1-8 + bonus odpoved
-4. Na tychto slidoch pouzi textove placeholdery podla potreby:
+5. Pocet round blokov v Slides sablone musi byt rovnaky ako pocet kol v zdrojovom sheete.
+6. Na tychto slidoch pouzi textove placeholdery podla potreby:
    - `{{ROUND_TITLE}}`
    - `{{TOPIC_TITLE}}`
    - `{{QUESTION_NUMBER}}`
@@ -40,8 +42,8 @@ Google Apps Script na naplnenie Google Slides prezentacie zo zdrojoveho Google S
    - `{{QUESTION_TEXT}}`
    - `{{ANSWER_LABEL}}`
    - `{{ANSWER_TEXT}}`
-5. Skript tento cely round block pri generovani skopiruje pre kazde kolo, naplni ho textami a povodny template block z vyslednej prezentacie odstrani.
-6. Staticke slidy pred round blockom a po nom ostanu zachovane.
+7. Skript pri generovani skopiruje kazdy round block pre zodpovedajuce kolo, naplni ho textami a povodne template bloky z vyslednej prezentacie odstrani.
+8. Staticke slidy pred prvym round blockom a po poslednom round blocku ostanu zachovane.
 
 ## Clasp workflow
 `clasp` je bezplatne CLI pre Google Apps Script. V tomto repozitari je uz nastavene lokalne cez `npm`.

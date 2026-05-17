@@ -7,14 +7,18 @@ var QuizSlidesService = (function () {
       Session.getScriptTimeZone(),
       'yyyy-MM-dd HH:mm'
     );
-    var roundBlocks = buildRoundBlocks(parsedQuiz.rounds);
     var templateFile = DriveApp.getFileById(QUIZ_CONFIG.TEMPLATE_PRESENTATION_ID);
     var presentationFile = templateFile.makeCopy(
       QUIZ_CONFIG.PROJECT_NAME + ' - ' + parsedQuiz.sourceSheetName + ' - ' + timestamp
     );
     var presentation = SlidesApp.openById(presentationFile.getId());
+    var templateBlocks = findRoundTemplateBlocks(presentation);
+    var roundBlocks;
 
-    fillTemplateSlides(presentation, roundBlocks);
+    validateRoundTemplateCount(parsedQuiz.rounds, templateBlocks);
+    roundBlocks = buildRoundBlocks(parsedQuiz.rounds, templateBlocks);
+
+    fillTemplateSlides(presentation, roundBlocks, templateBlocks);
     movePresentationToSpreadsheetFolder(presentation, spreadsheet);
 
     return {
@@ -30,9 +34,19 @@ var QuizSlidesService = (function () {
     }
   }
 
-  function buildRoundBlocks(rounds) {
-    return rounds.map(function (round) {
+  function validateRoundTemplateCount(rounds, templateBlocks) {
+    if (rounds.length !== templateBlocks.length) {
+      throw new Error(
+        'Template contains ' + templateBlocks.length +
+        ' round block(s), but sheet contains ' + rounds.length + ' round(s).'
+      );
+    }
+  }
+
+  function buildRoundBlocks(rounds, templateBlocks) {
+    return rounds.map(function (round, index) {
       var slides = [];
+      var templateBlock = templateBlocks[index];
 
       round.topics.forEach(function (topic) {
         slides.push({
@@ -44,7 +58,13 @@ var QuizSlidesService = (function () {
             type: 'question',
             replacements: createQuestionReplacements(
               round,
-              question,
+              {
+                type: question.type,
+                topicTitle: topic.title,
+                question: question.question,
+                answer: question.answer,
+                order: question.order
+              },
               getQuestionNumber(round, question)
             )
           });
@@ -60,8 +80,10 @@ var QuizSlidesService = (function () {
         )
       });
 
-      slides.push({
-        type: 'static'
+      templateBlock.staticSlots.forEach(function () {
+        slides.push({
+          type: 'static'
+        });
       });
 
       round.questions.forEach(function (item) {
@@ -84,7 +106,7 @@ var QuizSlidesService = (function () {
         )
       });
 
-      validateRoundBlockSize(slides, round.number);
+      validateRoundBlockSize(slides, round.number, templateBlock);
 
       return {
         roundNumber: round.number,
@@ -93,8 +115,8 @@ var QuizSlidesService = (function () {
     });
   }
 
-  function validateRoundBlockSize(slides, roundNumber) {
-    var expectedSlides = buildTemplateSlotSequence().length;
+  function validateRoundBlockSize(slides, roundNumber, templateBlock) {
+    var expectedSlides = templateBlock.slots.length;
 
     if (slides.length !== expectedSlides) {
       throw new Error(
@@ -157,16 +179,17 @@ var QuizSlidesService = (function () {
     ];
   }
 
-  function fillTemplateSlides(presentation, roundBlocks) {
-    var templateBlock = findRoundTemplateBlock(presentation);
-    var insertionIndex = templateBlock.startIndex;
+  function fillTemplateSlides(presentation, roundBlocks, templateBlocks) {
+    var insertionIndex = templateBlocks[0].startIndex;
     var insertedSlides = [];
 
     if (!roundBlocks.length) {
       throw new Error('No renderable quiz items were produced from the sheet.');
     }
 
-    roundBlocks.forEach(function (roundBlock) {
+    roundBlocks.forEach(function (roundBlock, roundIndex) {
+      var templateBlock = templateBlocks[roundIndex];
+
       roundBlock.slides.forEach(function (renderItem, slotIndex) {
         var templateSlide = templateBlock.slots[slotIndex];
         var duplicatedSlide = templateSlide.slide.duplicate();
@@ -187,80 +210,158 @@ var QuizSlidesService = (function () {
       });
     });
 
-    removeRoundTemplateBlock(templateBlock);
+    removeRoundTemplateBlocks(templateBlocks);
   }
 
-  function findRoundTemplateBlock(presentation) {
+  function findRoundTemplateBlocks(presentation) {
     var slides = presentation.getSlides();
-    var expectedSlots = buildTemplateSlotSequence();
-    var startIndex = findRoundTemplateStartIndex(presentation, slides);
-    var slots = [];
+    var blocks = [];
     var i;
 
-    for (i = 0; i < expectedSlots.length; i += 1) {
-      var slide = slides[startIndex + i];
-      var expectedType = expectedSlots[i].type;
-      var actualType;
+    for (i = 0; i < slides.length; i += 1) {
+      var slideType = detectSlideType(presentation, slides[i], i + 1);
+      var block;
 
-      if (!slide) {
+      if (!slideType) {
+        continue;
+      }
+
+      if (slideType !== 'topic') {
         throw new Error(
-          'Template round block is incomplete. Missing slide for slot ' + (i + 1) + '.'
+          'Template slide ' + (i + 1) +
+          ' contains a "' + slideType + '" marker outside a round block.'
         );
       }
 
-      actualType = detectSlideType(presentation, slide, startIndex + i + 1);
+      block = parseRoundTemplateBlock(presentation, slides, i, blocks.length + 1);
+      blocks.push(block);
+      i = block.endIndex;
+    }
 
-      if (expectedType === 'static') {
-        if (actualType) {
-          throw new Error(
-            'Template round block slot ' + (i + 1) +
-            ' must be a static slide without quiz markers.'
-          );
-        }
-      } else if (actualType !== expectedType) {
+    if (!blocks.length) {
+      throw new Error(
+        'Template is missing the first topic marker slide (' + markerForType('topic') + ').'
+      );
+    }
+
+    return blocks;
+  }
+
+  function parseRoundTemplateBlock(presentation, slides, startIndex, blockNumber) {
+    var questionSlots = buildQuestionTemplateSlotSequence();
+    var answerSlots = buildAnswerTemplateSlotSequence();
+    var slots = [];
+    var staticSlots = [];
+    var cursor = startIndex;
+    var i;
+
+    for (i = 0; i < questionSlots.length; i += 1) {
+      var expectedType = questionSlots[i].type;
+      var questionSlide = slides[cursor];
+      var questionSlideType;
+
+      if (!questionSlide) {
         throw new Error(
-          'Template round block slot ' + (i + 1) +
-          ' expected "' + expectedType + '" marker, found "' +
-          (actualType || 'none') + '".'
+          'Template round block ' + blockNumber +
+          ' is incomplete. Missing slide for slot ' + (i + 1) + '.'
+        );
+      }
+
+      questionSlideType = detectSlideType(presentation, questionSlide, cursor + 1);
+
+      if (questionSlideType !== expectedType) {
+        throw new Error(
+          'Template round block ' + blockNumber +
+          ' slot ' + (i + 1) + ' expected "' + expectedType +
+          '" marker, found "' + (questionSlideType || 'none') + '".'
         );
       }
 
       slots.push({
         type: expectedType,
-        slide: slide
+        slide: questionSlide
       });
+      cursor += 1;
+    }
+
+    while (cursor < slides.length) {
+      var staticSlide = slides[cursor];
+      var staticSlideType = detectSlideType(presentation, staticSlide, cursor + 1);
+
+      if (staticSlideType === 'answer') {
+        break;
+      }
+
+      if (staticSlideType) {
+        throw new Error(
+          'Template round block ' + blockNumber +
+          ' contains unexpected "' + staticSlideType +
+          '" marker in the static promo section on slide ' + (cursor + 1) + '.'
+        );
+      }
+
+      staticSlots.push({
+        type: 'static',
+        slide: staticSlide
+      });
+      slots.push({
+        type: 'static',
+        slide: staticSlide
+      });
+      cursor += 1;
+    }
+
+    if (cursor >= slides.length) {
+      throw new Error(
+        'Template round block ' + blockNumber +
+        ' is missing the first answer marker slide (' + markerForType('answer') + ').'
+      );
+    }
+
+    for (i = 0; i < answerSlots.length; i += 1) {
+      var answerSlide = slides[cursor];
+      var answerType;
+
+      if (!answerSlide) {
+        throw new Error(
+          'Template round block ' + blockNumber +
+          ' is incomplete. Missing answer slide for slot ' + (i + 1) + '.'
+        );
+      }
+
+      answerType = detectSlideType(presentation, answerSlide, cursor + 1);
+
+      if (answerType !== 'answer') {
+        throw new Error(
+          'Template round block ' + blockNumber +
+          ' answer slot ' + (i + 1) + ' expected "answer" marker, found "' +
+          (answerType || 'none') + '".'
+        );
+      }
+
+      slots.push({
+        type: 'answer',
+        slide: answerSlide
+      });
+      cursor += 1;
     }
 
     return {
       startIndex: startIndex,
+      endIndex: cursor - 1,
+      staticSlots: staticSlots,
       slots: slots
     };
   }
 
-  function findRoundTemplateStartIndex(presentation, slides) {
-    var i;
-
-    for (i = 0; i < slides.length; i += 1) {
-      if (detectSlideType(presentation, slides[i], i + 1) === 'topic') {
-        return i;
-      }
-    }
-
-    throw new Error(
-      'Template is missing the first topic marker slide (' + markerForType('topic') + ').'
-    );
-  }
-
-  function buildTemplateSlotSequence() {
+  function buildQuestionTemplateSlotSequence() {
     var slots = [];
     var topicCount = QUIZ_CONFIG.RULES.TOPICS_PER_ROUND;
     var questionsPerTopic = QUIZ_CONFIG.RULES.QUESTIONS_PER_TOPIC;
     var bonusCount = QUIZ_CONFIG.RULES.BONUS_PER_ROUND;
-    var totalAnswerSlides = (topicCount * questionsPerTopic) + bonusCount;
     var topicIndex;
     var questionIndex;
     var bonusIndex;
-    var answerIndex;
 
     for (topicIndex = 0; topicIndex < topicCount; topicIndex += 1) {
       slots.push({ type: 'topic' });
@@ -274,7 +375,16 @@ var QuizSlidesService = (function () {
       slots.push({ type: 'question' });
     }
 
-    slots.push({ type: 'static' });
+    return slots;
+  }
+
+  function buildAnswerTemplateSlotSequence() {
+    var slots = [];
+    var topicCount = QUIZ_CONFIG.RULES.TOPICS_PER_ROUND;
+    var questionsPerTopic = QUIZ_CONFIG.RULES.QUESTIONS_PER_TOPIC;
+    var bonusCount = QUIZ_CONFIG.RULES.BONUS_PER_ROUND;
+    var totalAnswerSlides = (topicCount * questionsPerTopic) + bonusCount;
+    var answerIndex;
 
     for (answerIndex = 0; answerIndex < totalAnswerSlides; answerIndex += 1) {
       slots.push({ type: 'answer' });
@@ -308,12 +418,18 @@ var QuizSlidesService = (function () {
     return matchedTypes.length ? matchedTypes[0] : null;
   }
 
-  function removeRoundTemplateBlock(templateBlock) {
-    var i;
+  function removeRoundTemplateBlocks(templateBlocks) {
+    var slidesToRemove = [];
 
-    for (i = templateBlock.slots.length - 1; i >= 0; i -= 1) {
-      templateBlock.slots[i].slide.remove();
-    }
+    templateBlocks.forEach(function (templateBlock) {
+      templateBlock.slots.forEach(function (slot) {
+        slidesToRemove.push(slot.slide);
+      });
+    });
+
+    slidesToRemove.reverse().forEach(function (slide) {
+      slide.remove();
+    });
   }
 
   function getPageText(page) {
