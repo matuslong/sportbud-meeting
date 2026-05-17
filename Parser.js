@@ -1,19 +1,69 @@
 var QuizParser = (function () {
-  function parseSheet(sheet) {
+  function parseSpreadsheet(spreadsheet) {
+    var baseSheet = getBaseSheet(spreadsheet);
+    var riskSheet = spreadsheet.getSheetByName(QUIZ_CONFIG.RISK.SHEET_NAME);
+    var rounds = parseBaseSheet(baseSheet);
+    var risk = parseRiskSheet(riskSheet);
+
+    return {
+      sourceSheetName: baseSheet.getName(),
+      generatedAt: new Date(),
+      rounds: rounds,
+      risk: risk
+    };
+  }
+
+  function parseBaseSheet(sheet) {
     var values = sheet.getDataRange().getValues();
     var rows = normalizeRows(values);
 
     if (!rows.length) {
-      throw new Error('Sheet does not contain quiz data.');
+      throw new Error('Sheet "' + sheet.getName() + '" does not contain quiz data.');
     }
 
-    var rounds = parseRounds(rows);
+    return parseRounds(rows);
+  }
+
+  function parseRiskSheet(sheet) {
+    var values;
+    var rows;
+
+    if (!sheet) {
+      throw new Error('Missing sheet "' + QUIZ_CONFIG.RISK.SHEET_NAME + '".');
+    }
+
+    values = sheet.getDataRange().getValues();
+    rows = normalizeRiskRows(values);
 
     return {
-      sourceSheetName: sheet.getName(),
-      generatedAt: new Date(),
-      rounds: rounds
+      sheetName: sheet.getName(),
+      categories: parseRiskCategories(rows)
     };
+  }
+
+  function getBaseSheet(spreadsheet) {
+    var activeSheet = spreadsheet.getActiveSheet();
+    var namedSheet;
+    var fallbackSheet;
+
+    if (activeSheet && activeSheet.getName() !== QUIZ_CONFIG.RISK.SHEET_NAME) {
+      return activeSheet;
+    }
+
+    namedSheet = spreadsheet.getSheetByName(QUIZ_CONFIG.BASE_SHEET_NAME);
+    if (namedSheet && namedSheet.getName() !== QUIZ_CONFIG.RISK.SHEET_NAME) {
+      return namedSheet;
+    }
+
+    fallbackSheet = spreadsheet.getSheets().filter(function (sheet) {
+      return sheet.getName() !== QUIZ_CONFIG.RISK.SHEET_NAME;
+    })[0];
+
+    if (!fallbackSheet) {
+      throw new Error('Could not determine the base quiz sheet.');
+    }
+
+    return fallbackSheet;
   }
 
   function normalizeRows(values) {
@@ -29,6 +79,18 @@ var QuizParser = (function () {
       .filter(function (row) {
         return row.orderRaw || row.text || row.answer;
       });
+  }
+
+  function normalizeRiskRows(values) {
+    return values.map(function (row, index) {
+      return {
+        rowNumber: index + 1,
+        difficultyRaw: toSafeString(row[0]),
+        text: toSafeString(row[1]),
+        answer: toSafeString(row[2]),
+        note: toSafeString(row[3])
+      };
+    });
   }
 
   function parseRounds(rows) {
@@ -103,6 +165,83 @@ var QuizParser = (function () {
     return rounds;
   }
 
+  function parseRiskCategories(rows) {
+    var categories = [];
+    var i = 0;
+
+    while (i < rows.length) {
+      if (categories.length === QUIZ_CONFIG.RISK.TOPIC_COUNT) {
+        break;
+      }
+
+      var row = rows[i];
+
+      if (isBlankRiskRow(row)) {
+        i += 1;
+        continue;
+      }
+
+      if (!isRiskHeaderRow(row)) {
+        throw new Error(
+          'Risk sheet expected a topic header row at row ' + row.rowNumber + '.'
+        );
+      }
+
+      categories.push(parseRiskCategory(rows, i));
+      i += QUIZ_CONFIG.RISK.QUESTIONS_PER_TOPIC + 1;
+    }
+
+    validateRiskCategories(categories);
+
+    return categories;
+  }
+
+  function parseRiskCategory(rows, startIndex) {
+    var headerRow = rows[startIndex];
+    var title = headerRow.text;
+    var questions = [];
+    var offset;
+
+    for (offset = 1; offset <= QUIZ_CONFIG.RISK.QUESTIONS_PER_TOPIC; offset += 1) {
+      var row = rows[startIndex + offset];
+      var expectedPoints = offset;
+      var points;
+
+      if (!row || isBlankRiskRow(row)) {
+        throw new Error(
+          'Risk topic "' + title + '" is missing question for ' + expectedPoints + ' point(s).'
+        );
+      }
+
+      points = parseRiskPoints(row.difficultyRaw, row.rowNumber);
+      if (points !== expectedPoints) {
+        throw new Error(
+          'Risk topic "' + title + '" expected difficulty ' + expectedPoints +
+          ' at row ' + row.rowNumber + ', found ' + row.difficultyRaw + '.'
+        );
+      }
+
+      if (!row.text) {
+        throw new Error('Risk question text is missing at row ' + row.rowNumber + '.');
+      }
+      if (!row.answer) {
+        throw new Error('Risk answer is missing at row ' + row.rowNumber + '.');
+      }
+
+      questions.push({
+        points: points,
+        question: row.text,
+        answer: row.answer,
+        rowNumber: row.rowNumber
+      });
+    }
+
+    return {
+      title: title,
+      questions: questions
+    };
+  }
+
   function validateRound(round) {
     if (round.topics.length !== QUIZ_CONFIG.RULES.TOPICS_PER_ROUND) {
       throw new Error(
@@ -135,6 +274,15 @@ var QuizParser = (function () {
 
     if (!round.bonusQuestion.question || !round.bonusQuestion.answer) {
       throw new Error('Round ' + round.number + ' has incomplete bonus question.');
+    }
+  }
+
+  function validateRiskCategories(categories) {
+    if (categories.length !== QUIZ_CONFIG.RISK.TOPIC_COUNT) {
+      throw new Error(
+        'Risk sheet must contain exactly ' + QUIZ_CONFIG.RISK.TOPIC_COUNT +
+        ' topics. Found: ' + categories.length + '.'
+      );
     }
   }
 
@@ -187,14 +335,33 @@ var QuizParser = (function () {
     var orderToken = row.orderRaw.toUpperCase();
     var answerToken = row.answer.toUpperCase();
 
-    // Supports user sheet format: A="Order", B=topic name, C="Answer".
     if (orderToken === 'ORDER' && answerToken === 'ANSWER') {
       return true;
     }
 
-    // Fallback format: A empty, B=topic name, C empty.
-    var hasQuestionOrder = row.orderRaw && !isBonusRow(row);
-    return !hasQuestionOrder && !row.answer;
+    return !row.orderRaw && !row.answer;
+  }
+
+  function isBlankRiskRow(row) {
+    return !row.difficultyRaw && !row.text && !row.answer && !row.note;
+  }
+
+  function isRiskHeaderRow(row) {
+    return row.difficultyRaw.toUpperCase() === 'DIFFICULTY' &&
+      row.answer.toUpperCase() === 'ANSWER' &&
+      !!row.text;
+  }
+
+  function parseRiskPoints(rawValue, rowNumber) {
+    var parsed = Number(rawValue);
+
+    if (!parsed || parsed % 1 !== 0) {
+      throw new Error(
+        'Invalid Risk difficulty "' + rawValue + '" at row ' + rowNumber + '.'
+      );
+    }
+
+    return parsed;
   }
 
   function toSafeString(value) {
@@ -211,6 +378,6 @@ var QuizParser = (function () {
   }
 
   return {
-    parseSheet: parseSheet
+    parseSpreadsheet: parseSpreadsheet
   };
 })();

@@ -8,8 +8,7 @@ function onOpen() {
 function generateQuizPresentation() {
   try {
     var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = spreadsheet.getActiveSheet();
-    var parsed = QuizParser.parseSheet(sheet);
+    var parsed = QuizParser.parseSpreadsheet(spreadsheet);
     var result = QuizSlidesService.createPresentation(parsed, spreadsheet);
 
     SpreadsheetApp.getUi().alert(
@@ -18,6 +17,9 @@ function generateQuizPresentation() {
       'Filled topic slides: ' + result.stats.topicSlides + '\n' +
       'Filled question slides: ' + result.stats.questionSlides + '\n' +
       'Filled answer slides: ' + result.stats.answerSlides + '\n' +
+      'Risk topics: ' + result.stats.riskTopicCount + '\n' +
+      'Risk question slides: ' + result.stats.riskQuestionSlides + '\n' +
+      'Risk answer slides: ' + result.stats.riskAnswerSlides + '\n' +
       'Total slides: ' + result.presentation.getSlides().length + '\n\n' +
       result.presentation.getUrl()
     );

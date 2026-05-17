@@ -18,12 +18,13 @@ var QuizSlidesService = (function () {
     validateRoundTemplateCount(parsedQuiz.rounds, templateBlocks);
     roundBlocks = buildRoundBlocks(parsedQuiz.rounds, templateBlocks);
 
-    fillTemplateSlides(presentation, roundBlocks, templateBlocks);
+    fillQuizTemplateSlides(presentation, roundBlocks, templateBlocks);
+    fillRiskSection(presentation, parsedQuiz.risk);
     movePresentationToSpreadsheetFolder(presentation, spreadsheet);
 
     return {
       presentation: presentation,
-      stats: summarizeRoundBlocks(roundBlocks)
+      stats: summarizePresentation(roundBlocks, parsedQuiz.risk)
     };
   }
 
@@ -53,6 +54,7 @@ var QuizSlidesService = (function () {
           type: 'topic',
           replacements: createTopicReplacements(round, topic)
         });
+
         topic.questions.forEach(function (question) {
           slides.push({
             type: 'question',
@@ -81,9 +83,7 @@ var QuizSlidesService = (function () {
       });
 
       templateBlock.staticSlots.forEach(function () {
-        slides.push({
-          type: 'static'
-        });
+        slides.push({ type: 'static' });
       });
 
       round.questions.forEach(function (item) {
@@ -179,7 +179,7 @@ var QuizSlidesService = (function () {
     ];
   }
 
-  function fillTemplateSlides(presentation, roundBlocks, templateBlocks) {
+  function fillQuizTemplateSlides(presentation, roundBlocks, templateBlocks) {
     var insertionIndex = templateBlocks[0].startIndex;
     var insertedSlides = [];
 
@@ -213,13 +213,45 @@ var QuizSlidesService = (function () {
     removeRoundTemplateBlocks(templateBlocks);
   }
 
+  function fillRiskSection(presentation, riskData) {
+    var template = findRiskTemplate(presentation, riskData);
+    var flatQuestions = flattenRiskQuestions(riskData.categories);
+
+    setRiskNavigationLinks(template.menuSlide, template.pairs);
+    replaceRiskMenuTokens(template.menuSlide, riskData.categories);
+    clearRiskMarker(template.menuSlide, QUIZ_CONFIG.RISK.TEMPLATE_MARKERS.MENU);
+
+    flatQuestions.forEach(function (item, index) {
+      var pair = template.pairs[index];
+      var questionReplacements = createRiskQuestionReplacements(item);
+      var answerReplacements = createRiskAnswerReplacements(item);
+
+      replaceRiskTokensOnSlide(
+        pair.questionSlide,
+        questionReplacements,
+        requiredRiskTokensForType('question'),
+        getSlidePosition(presentation, pair.questionSlide)
+      );
+      clearRiskMarker(pair.questionSlide, QUIZ_CONFIG.RISK.TEMPLATE_MARKERS.QUESTION);
+
+      replaceRiskTokensOnSlide(
+        pair.answerSlide,
+        answerReplacements,
+        requiredRiskTokensForType('answer'),
+        getSlidePosition(presentation, pair.answerSlide)
+      );
+      clearRiskMarker(pair.answerSlide, QUIZ_CONFIG.RISK.TEMPLATE_MARKERS.ANSWER);
+    });
+
+  }
+
   function findRoundTemplateBlocks(presentation) {
     var slides = presentation.getSlides();
     var blocks = [];
     var i;
 
     for (i = 0; i < slides.length; i += 1) {
-      var slideType = detectSlideType(presentation, slides[i], i + 1);
+      var slideType = detectQuizSlideType(presentation, slides[i], i + 1);
       var block;
 
       if (!slideType) {
@@ -229,7 +261,7 @@ var QuizSlidesService = (function () {
       if (slideType !== 'topic') {
         throw new Error(
           'Template slide ' + (i + 1) +
-          ' contains a "' + slideType + '" marker outside a round block.'
+          ' contains a "' + slideType + '" quiz marker outside a round block.'
         );
       }
 
@@ -267,7 +299,7 @@ var QuizSlidesService = (function () {
         );
       }
 
-      questionSlideType = detectSlideType(presentation, questionSlide, cursor + 1);
+      questionSlideType = detectQuizSlideType(presentation, questionSlide, cursor + 1);
 
       if (questionSlideType !== expectedType) {
         throw new Error(
@@ -286,7 +318,7 @@ var QuizSlidesService = (function () {
 
     while (cursor < slides.length) {
       var staticSlide = slides[cursor];
-      var staticSlideType = detectSlideType(presentation, staticSlide, cursor + 1);
+      var staticSlideType = detectQuizSlideType(presentation, staticSlide, cursor + 1);
 
       if (staticSlideType === 'answer') {
         break;
@@ -329,7 +361,7 @@ var QuizSlidesService = (function () {
         );
       }
 
-      answerType = detectSlideType(presentation, answerSlide, cursor + 1);
+      answerType = detectQuizSlideType(presentation, answerSlide, cursor + 1);
 
       if (answerType !== 'answer') {
         throw new Error(
@@ -352,6 +384,159 @@ var QuizSlidesService = (function () {
       staticSlots: staticSlots,
       slots: slots
     };
+  }
+
+  function findRiskTemplate(presentation, riskData) {
+    var slides = presentation.getSlides();
+    var menuIndex = findSlideIndexByMarker(slides, QUIZ_CONFIG.RISK.TEMPLATE_MARKERS.MENU);
+    var expectedPairs = QUIZ_CONFIG.RISK.TOPIC_COUNT * QUIZ_CONFIG.RISK.QUESTIONS_PER_TOPIC;
+    var pairs = [];
+    var cursor = menuIndex + 1;
+    var pairIndex;
+
+    if (menuIndex === -1) {
+      throw new Error(
+        'Template is missing the Risk menu slide marker (' +
+        QUIZ_CONFIG.RISK.TEMPLATE_MARKERS.MENU + ').'
+      );
+    }
+
+    if (riskData.categories.length !== QUIZ_CONFIG.RISK.TOPIC_COUNT) {
+      throw new Error(
+        'Risk data contains ' + riskData.categories.length + ' topic(s), expected ' +
+        QUIZ_CONFIG.RISK.TOPIC_COUNT + '.'
+      );
+    }
+
+    for (pairIndex = 0; pairIndex < expectedPairs; pairIndex += 1) {
+      var questionSlide = slides[cursor];
+      var answerSlide = slides[cursor + 1];
+      var questionType;
+      var answerType;
+
+      if (!questionSlide || !answerSlide) {
+        throw new Error('Risk template is missing one or more question/answer slides.');
+      }
+
+      questionType = detectRiskSlideType(presentation, questionSlide, cursor + 1);
+      answerType = detectRiskSlideType(presentation, answerSlide, cursor + 2);
+
+      if (questionType !== 'question') {
+        throw new Error(
+          'Risk template expected a question slide at slide ' + (cursor + 1) +
+          ', found "' + (questionType || 'none') + '".'
+        );
+      }
+
+      if (answerType !== 'answer') {
+        throw new Error(
+          'Risk template expected an answer slide at slide ' + (cursor + 2) +
+          ', found "' + (answerType || 'none') + '".'
+        );
+      }
+
+      pairs.push({
+        questionSlide: questionSlide,
+        answerSlide: answerSlide
+      });
+
+      cursor += 2;
+    }
+
+    return {
+      menuSlide: slides[menuIndex],
+      pairs: pairs
+    };
+  }
+
+  function flattenRiskQuestions(categories) {
+    var items = [];
+
+    categories.forEach(function (category, categoryIndex) {
+      category.questions.forEach(function (question, questionIndex) {
+        items.push({
+          topicTitle: category.title,
+          topicIndex: categoryIndex + 1,
+          questionIndex: questionIndex + 1,
+          points: question.points,
+          question: question.question,
+          answer: question.answer
+        });
+      });
+    });
+
+    return items;
+  }
+
+  function createRiskQuestionReplacements(item) {
+    return [
+      { token: QUIZ_CONFIG.RISK.TEMPLATE_TOKENS.TOPIC_TITLE, value: item.topicTitle },
+      { token: QUIZ_CONFIG.RISK.TEMPLATE_TOKENS.POINTS_LABEL, value: formatPointsLabel(item.points) },
+      { token: QUIZ_CONFIG.RISK.TEMPLATE_TOKENS.QUESTION_TEXT, value: item.question }
+    ];
+  }
+
+  function createRiskAnswerReplacements(item) {
+    return [
+      { token: QUIZ_CONFIG.RISK.TEMPLATE_TOKENS.POINTS_LABEL, value: formatPointsLabel(item.points) },
+      { token: QUIZ_CONFIG.RISK.TEMPLATE_TOKENS.QUESTION_TEXT, value: item.question },
+      { token: QUIZ_CONFIG.RISK.TEMPLATE_TOKENS.ANSWER_TEXT, value: item.answer }
+    ];
+  }
+
+  function replaceRiskMenuTokens(menuSlide, categories) {
+    categories.forEach(function (category, categoryIndex) {
+      menuSlide.replaceAllText(riskMenuTopicToken(categoryIndex + 1), category.title);
+
+      category.questions.forEach(function (question, questionIndex) {
+        replaceTextInMatchingShape(
+          menuSlide,
+          riskMenuQuestionToken(categoryIndex + 1, questionIndex + 1),
+          formatPointsLabel(question.points)
+        );
+      });
+    });
+  }
+
+  function replaceRiskTokensOnSlide(slide, replacements, requiredTokens, slideIndex) {
+    var pageText = getPageText(slide);
+
+    requiredTokens.forEach(function (token) {
+      if (pageText.indexOf(token) === -1) {
+        throw new Error(
+          'Missing Risk template token "' + token + '" on slide ' + slideIndex + '.'
+        );
+      }
+    });
+
+    replacements.forEach(function (replacement) {
+      slide.replaceAllText(replacement.token, replacement.value);
+    });
+  }
+
+  function requiredRiskTokensForType(type) {
+    var tokens = QUIZ_CONFIG.RISK.TEMPLATE_TOKENS;
+
+    if (type === 'question') {
+      return [tokens.TOPIC_TITLE, tokens.POINTS_LABEL, tokens.QUESTION_TEXT];
+    }
+
+    return [tokens.POINTS_LABEL, tokens.QUESTION_TEXT, tokens.ANSWER_TEXT];
+  }
+
+  function setRiskNavigationLinks(menuSlide, pairs) {
+    pairs.forEach(function (pair, index) {
+      var categoryIndex = Math.floor(index / QUIZ_CONFIG.RISK.QUESTIONS_PER_TOPIC) + 1;
+      var questionIndex = (index % QUIZ_CONFIG.RISK.QUESTIONS_PER_TOPIC) + 1;
+
+      setShapeLinkToSlide(
+        menuSlide,
+        riskMenuQuestionToken(categoryIndex, questionIndex),
+        pair.questionSlide
+      );
+      setShapeLinksByText(pair.questionSlide, QUIZ_CONFIG.RISK.BACK_LINK_TEXT, menuSlide);
+      setShapeLinksByText(pair.answerSlide, QUIZ_CONFIG.RISK.BACK_LINK_TEXT, menuSlide);
+    });
   }
 
   function buildQuestionTemplateSlotSequence() {
@@ -393,20 +578,41 @@ var QuizSlidesService = (function () {
     return slots;
   }
 
-  function detectSlideType(presentation, slide, fallbackSlideIndex) {
-    var markers = QUIZ_CONFIG.TEMPLATE_MARKERS;
+  function detectQuizSlideType(presentation, slide, fallbackSlideIndex) {
+    return detectMarkerType(
+      presentation,
+      slide,
+      fallbackSlideIndex,
+      [
+        { type: 'topic', marker: QUIZ_CONFIG.TEMPLATE_MARKERS.TOPIC },
+        { type: 'question', marker: QUIZ_CONFIG.TEMPLATE_MARKERS.QUESTION },
+        { type: 'answer', marker: QUIZ_CONFIG.TEMPLATE_MARKERS.ANSWER }
+      ]
+    );
+  }
+
+  function detectRiskSlideType(presentation, slide, fallbackSlideIndex) {
+    return detectMarkerType(
+      presentation,
+      slide,
+      fallbackSlideIndex,
+      [
+        { type: 'menu', marker: QUIZ_CONFIG.RISK.TEMPLATE_MARKERS.MENU },
+        { type: 'question', marker: QUIZ_CONFIG.RISK.TEMPLATE_MARKERS.QUESTION },
+        { type: 'answer', marker: QUIZ_CONFIG.RISK.TEMPLATE_MARKERS.ANSWER }
+      ]
+    );
+  }
+
+  function detectMarkerType(presentation, slide, fallbackSlideIndex, markerEntries) {
     var pageText = getPageText(slide);
     var matchedTypes = [];
 
-    if (pageText.indexOf(markers.TOPIC) !== -1) {
-      matchedTypes.push('topic');
-    }
-    if (pageText.indexOf(markers.QUESTION) !== -1) {
-      matchedTypes.push('question');
-    }
-    if (pageText.indexOf(markers.ANSWER) !== -1) {
-      matchedTypes.push('answer');
-    }
+    markerEntries.forEach(function (entry) {
+      if (pageText.indexOf(entry.marker) !== -1) {
+        matchedTypes.push(entry.type);
+      }
+    });
 
     if (matchedTypes.length > 1) {
       throw new Error(
@@ -476,6 +682,10 @@ var QuizSlidesService = (function () {
     slide.replaceAllText(marker, '');
   }
 
+  function clearRiskMarker(slide, marker) {
+    slide.replaceAllText(marker, '');
+  }
+
   function markerForType(type) {
     if (type === 'topic') {
       return QUIZ_CONFIG.TEMPLATE_MARKERS.TOPIC;
@@ -500,11 +710,103 @@ var QuizSlidesService = (function () {
     return -1;
   }
 
-  function summarizeRoundBlocks(roundBlocks) {
+  function findSlideIndexByMarker(slides, marker) {
+    var i;
+
+    for (i = 0; i < slides.length; i += 1) {
+      if (getPageText(slides[i]).indexOf(marker) !== -1) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
+
+  function replaceTextInMatchingShape(slide, searchText, replacement) {
+    var shapes = findShapesContainingText(slide, searchText);
+
+    if (shapes.length !== 1) {
+      throw new Error(
+        'Expected exactly one shape containing "' + searchText + '" on slide ' +
+        getSlidePositionForPage(slide) + '.'
+      );
+    }
+
+    shapes[0].getText().replaceAllText(searchText, replacement);
+  }
+
+  function setShapeLinkToSlide(slide, searchText, targetSlide) {
+    var shapes = findShapesContainingText(slide, searchText);
+
+    if (shapes.length !== 1) {
+      throw new Error(
+        'Expected exactly one link target containing "' + searchText + '" on slide ' +
+        getSlidePositionForPage(slide) + '.'
+      );
+    }
+
+    shapes[0].getText().getTextStyle().setLinkSlide(targetSlide);
+  }
+
+  function setShapeLinksByText(slide, searchText, targetSlide) {
+    var shapes = findShapesContainingText(slide, searchText);
+
+    if (!shapes.length) {
+      throw new Error(
+        'Missing "' + searchText + '" link target on slide ' + getSlidePositionForPage(slide) + '.'
+      );
+    }
+
+    shapes.forEach(function (shape) {
+      shape.getText().getTextStyle().setLinkSlide(targetSlide);
+    });
+  }
+
+  function findShapesContainingText(slide, searchText) {
+    var matches = [];
+
+    slide.getPageElements().forEach(function (element) {
+      if (element.getPageElementType() === SlidesApp.PageElementType.SHAPE) {
+        var shape = element.asShape();
+        if (shape.getText().asString().indexOf(searchText) !== -1) {
+          matches.push(shape);
+        }
+      }
+    });
+
+    return matches;
+  }
+
+  function getSlidePositionForPage(slide) {
+    return slide.getObjectId();
+  }
+
+  function riskMenuTopicToken(topicIndex) {
+    return '{{RISK_MENU_TOPIC_' + topicIndex + '}}';
+  }
+
+  function riskMenuQuestionToken(topicIndex, questionIndex) {
+    return '{{RISK_MENU_' + topicIndex + '_' + questionIndex + '}}';
+  }
+
+  function formatPointsLabel(points) {
+    if (points === 1) {
+      return '1 bod';
+    }
+    if (points >= 2 && points <= 4) {
+      return points + ' body';
+    }
+    return points + ' bodů';
+  }
+
+  function summarizePresentation(roundBlocks, riskData) {
     var summary = {
       topicSlides: 0,
       questionSlides: 0,
-      answerSlides: 0
+      answerSlides: 0,
+      riskTopicCount: riskData.categories.length,
+      riskQuestionSlides: 0,
+      riskAnswerSlides: 0
     };
 
     roundBlocks.forEach(function (roundBlock) {
@@ -519,6 +821,11 @@ var QuizSlidesService = (function () {
       });
     });
 
+    riskData.categories.forEach(function (category) {
+      summary.riskQuestionSlides += category.questions.length;
+      summary.riskAnswerSlides += category.questions.length;
+    });
+
     return summary;
   }
 
@@ -531,8 +838,6 @@ var QuizSlidesService = (function () {
       if (parents.hasNext()) {
         var parentFolder = parents.next();
         parentFolder.addFile(presentationFile);
-
-        // Keep Drive clean: remove the new file from root folder if it was placed there.
         DriveApp.getRootFolder().removeFile(presentationFile);
       }
     } catch (error) {

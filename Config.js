@@ -3,6 +3,7 @@ var QUIZ_CONFIG = {
   MENU_NAME: 'Quiz Tools',
   MENU_ACTION_GENERATE: 'Generate Presentation',
   TEMPLATE_PRESENTATION_ID: '1oua7aM9tNjeBNYenfJTeXLgCkZEXLQBNoNp-fT5p_Q8',
+  BASE_SHEET_NAME: 'Základní část',
   SHEET_COLUMNS: {
     ORDER: 0,
     TEXT: 1,
@@ -26,5 +27,22 @@ var QUIZ_CONFIG = {
     QUESTION_TEXT: '{{QUESTION_TEXT}}',
     ANSWER_LABEL: '{{ANSWER_LABEL}}',
     ANSWER_TEXT: '{{ANSWER_TEXT}}'
+  },
+  RISK: {
+    SHEET_NAME: 'Riskuj',
+    TOPIC_COUNT: 6,
+    QUESTIONS_PER_TOPIC: 5,
+    BACK_LINK_TEXT: 'Zpátky k výběru',
+    TEMPLATE_MARKERS: {
+      MENU: '{{RISK_MENU_SLIDE}}',
+      QUESTION: '{{RISK_QUESTION_SLIDE}}',
+      ANSWER: '{{RISK_ANSWER_SLIDE}}'
+    },
+    TEMPLATE_TOKENS: {
+      TOPIC_TITLE: '{{RISK_TOPIC_TITLE}}',
+      POINTS_LABEL: '{{RISK_POINTS_LABEL}}',
+      QUESTION_TEXT: '{{RISK_QUESTION_TEXT}}',
+      ANSWER_TEXT: '{{RISK_ANSWER_TEXT}}'
+    }
   }
 };
