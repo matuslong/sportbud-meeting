@@ -1,74 +1,51 @@
-# Sportbud Meeting
+# Sportbud Meeting — Pub Quiz Slide Generator
 
-Google Apps Script na naplnenie Google Slides prezentacie zo zdrojoveho Google Sheetu pomocou pripravenej Slides sablony.
+Google Apps Script utility that generates pub quiz presentations in Google Slides from structured data in a Google Sheet.
 
-## Subory
-- `Main.gs` - menu, spustenie, orchestracia
-- `Config.gs` - konstanty, template ID, marker tokeny
-- `Parser.gs` - citanie a validacia dat zo Sheetu
-- `SlidesService.gs` - kopia Slides sablony a nahradenie placeholderov
-- `appsscript.json` - Apps Script manifest pre `clasp`
+## How it works
 
-## Datovy format v sheete
-- Stlpec A: cislo otazky (`1`, `2`, ...), `B` pre bonus, `P` pre zaverecny pivny bonus
-- Stlpec B: nazov temy (hlavicka) alebo text otazky
-- Stlpec C: odpoved
-- Kazda tema ma 4 otazky
-- 2 temy + 1 bonus = 1 kolo
-- Prazdne riadky sa ignoruju
+1. Fill in quiz data in the Google Sheet (rounds → topics → questions)
+2. Open the sheet and use the **Quiz Tools** menu
+3. Choose **Generate Presentation** to create a new Google Slides deck
+4. Optionally use **Refresh Standings Slides** to update leaderboard tables in an existing presentation without regenerating from scratch
 
-## Konfiguracia sablony
-1. Do `Config.gs` nastav `TEMPLATE_PRESENTATION_ID` na ID tvojej master Google Slides sablony.
-2. V Slides sablone priprav 1 round block pre kazde kolo, ktore chces generovat.
-3. Kazdy round block musi obsahovat:
-   - 2x topic slide s markerom `{{QUIZ_TOPIC_SLIDE}}`
-   - 9x question slide s markerom `{{QUIZ_QUESTION_SLIDE}}`
-   - 0 alebo viac statickych promo slidov bez markerov
-   - 9x answer slide s markerom `{{QUIZ_ANSWER_SLIDE}}`
-4. Poradie v kazdom round bloku musi byt presne:
-   - tema 1
-   - otazky 1-4
-   - tema 2
-   - otazky 5-8
-   - bonus otazka
-   - lubovolny pocet statickych promo slidov
-   - odpovede 1-8 + bonus odpoved
-5. Pocet round blokov v Slides sablone musi byt rovnaky ako pocet kol v zdrojovom sheete.
-6. Na tychto slidoch pouzi textove placeholdery podla potreby:
-   - `{{ROUND_TITLE}}`
-   - `{{TOPIC_TITLE}}`
-   - `{{QUESTION_NUMBER}}`
-   - `{{QUESTION_LABEL}}`
-   - `{{QUESTION_TEXT}}`
-   - `{{ANSWER_LABEL}}`
-   - `{{ANSWER_TEXT}}`
-7. Pre zaverecny pivny bonus pridaj samostatne slidy s markermi:
-   - `{{BEER_BONUS_QUESTION_SLIDE}}` s placeholderom `{{QUESTION_TEXT}}`
-   - `{{BEER_BONUS_ANSWER_SLIDE}}` s placeholdermi `{{QUESTION_TEXT}}` a `{{ANSWER_TEXT}}`
-8. Skript pri generovani skopiruje kazdy round block pre zodpovedajuce kolo, naplni ho textami a povodne template bloky z vyslednej prezentacie odstrani.
-9. Staticke slidy pred prvym round blockom a po poslednom round blocku ostanu zachovane.
+## Project structure
 
-## Clasp workflow
-`clasp` je bezplatne CLI pre Google Apps Script. V tomto repozitari je uz nastavene lokalne cez `npm`.
+| File | Purpose |
+|------|---------|
+| `Main.js` | Entry point, menu definition |
+| `Config.js` | Template IDs, column mappings, quiz config; stores last presentation ID |
+| `Parser.js` | Data validation and parsing from Sheets |
+| `SlidesService.js` | Presentation generation, slide manipulation, standings refresh |
 
-1. Prihlas sa do Google uctu:
-   - `npm run clasp:login`
-2. V Apps Script editore otvor `Project Settings` a skopiruj `Script ID`.
-3. V repozitari vytvor lokalny `.clasp.json`:
-   - `npm run clasp:setup -- PASTE_SCRIPT_ID_HERE`
-4. Skontroluj spojenie:
-   - `npm run clasp:status`
-5. Nahraj lokalne subory do Apps Script projektu:
-   - `npx clasp push -f`
-6. Ak si chces otvorit Apps Script projekt v browseri:
-   - `npm run clasp:open`
+> `.gs` files are local source mirrors — excluded from clasp pushes via `.claspignore`. Only `.js` files are deployed to Apps Script.
 
-Poznamky:
-- `.clasp.json` a `.clasprc.json` su ignorovane v gite, aby sa necommitovali lokalne prihlasenia a ID projektu.
-- Ak ide o container-bound script pripojeny k Google Sheetu, `Script ID` najdes stale v Apps Script projekte, nie v URL sheetu.
-- `clasp` v tomto repozitari pushuje `.js` subory do Apps Script projektu. `.gs` subory ostavaju lokalny zdroj pravdy a pred pushom ich treba zosuladit.
+## Setup & deploy
 
-## Pouzitie
-Po `clasp push` otvor prislusny Google Sheet a spusti `Quiz Tools -> Generate Presentation`.
+```bash
+npm install
+npx clasp login       # first time only
+npx clasp push        # deploy to Google Apps Script
+```
 
-Skript vzdy vytvori kopiu master sablony, zo 3 vzorovych slidov vygeneruje potrebny pocet tematickych, otazkovych a odpovedovych slidov a vyslednu prezentaciu presunie do rovnakeho Google Drive priecinka ako zdrojovy Sheet.
+Or use the npm script:
+
+```bash
+npm run clasp:push
+```
+
+## Data structure
+
+```
+Rounds
+  └─ Topics (2 per round)
+       └─ Questions (4 per topic + bonus question)
+```
+
+## Features
+
+- Full presentation generation from Sheet data
+- Per-round promo slides
+- Beer bonus slides
+- Riskuj presentation generation
+- Refresh Standings Slides — updates leaderboard tables in an existing presentation; state persisted to hidden `__sportbud_meta` sheet
