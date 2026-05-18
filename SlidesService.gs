@@ -13,20 +13,44 @@ var QuizSlidesService = (function () {
     );
     var presentation = SlidesApp.openById(presentationFile.getId());
     var templateBlocks = findRoundTemplateBlocks(presentation);
+    var standingsData = getStandingsData();
+    var standingsSlideIds;
     var roundBlocks;
 
     validateRoundTemplateCount(parsedQuiz.rounds, templateBlocks);
-    roundBlocks = buildRoundBlocks(parsedQuiz.rounds, templateBlocks);
+    roundBlocks = buildRoundBlocks(parsedQuiz.rounds, templateBlocks, standingsData);
 
-    fillQuizTemplateSlides(presentation, roundBlocks, templateBlocks);
+    standingsSlideIds = fillQuizTemplateSlides(presentation, roundBlocks, templateBlocks);
     fillBeerBonusSection(presentation, parsedQuiz.beerBonus);
     fillRiskSection(presentation, parsedQuiz.risk);
     movePresentationToSpreadsheetFolder(presentation, spreadsheet);
+    storeLastGeneratedPresentationState(presentation, standingsSlideIds);
 
     return {
       presentation: presentation,
       stats: summarizePresentation(roundBlocks, parsedQuiz.beerBonus, parsedQuiz.risk)
     };
+  }
+
+  function refreshStandingsSlides() {
+    var state = getStoredStandingsState();
+    var standingsData = getStandingsData();
+    var presentation = SlidesApp.openById(state.presentationId);
+    var slideMap = {};
+
+    presentation.getSlides().forEach(function (slide) {
+      slideMap[slide.getObjectId()] = slide;
+    });
+
+    state.standingsSlideIds.forEach(function (slideId) {
+      var slide = slideMap[slideId];
+
+      if (!slide) {
+        throw new Error('Missing standings slide with object ID ' + slideId + '.');
+      }
+
+      populateStandingsSlide(slide, standingsData, getSlidePosition(presentation, slide));
+    });
   }
 
   function validateTemplateConfig() {
@@ -45,7 +69,7 @@ var QuizSlidesService = (function () {
     }
   }
 
-  function buildRoundBlocks(rounds, templateBlocks) {
+  function buildRoundBlocks(rounds, templateBlocks, standingsData) {
     return rounds.map(function (round, index) {
       var slides = [];
       var templateBlock = templateBlocks[index];
@@ -83,7 +107,15 @@ var QuizSlidesService = (function () {
         )
       });
 
-      templateBlock.staticSlots.forEach(function () {
+      templateBlock.staticSlots.forEach(function (slot) {
+        if (slot.type === 'standings') {
+          slides.push({
+            type: 'standings',
+            standingsData: standingsData
+          });
+          return;
+        }
+
         slides.push({ type: 'static' });
       });
 
@@ -105,6 +137,17 @@ var QuizSlidesService = (function () {
           round.bonusQuestion,
           getQuestionNumber(round, round.bonusQuestion)
         )
+      });
+
+      templateBlock.trailingSlots.forEach(function (slot) {
+        if (slot.type === 'standings') {
+          slides.push({
+            type: 'standings',
+            standingsData: standingsData
+          });
+        } else {
+          slides.push({ type: 'static' });
+        }
       });
 
       validateRoundBlockSize(slides, round.number, templateBlock);
@@ -183,6 +226,7 @@ var QuizSlidesService = (function () {
   function fillQuizTemplateSlides(presentation, roundBlocks, templateBlocks) {
     var insertionIndex = templateBlocks[0].startIndex;
     var insertedSlides = [];
+    var standingsSlideIds = [];
 
     if (!roundBlocks.length) {
       throw new Error('No renderable quiz items were produced from the sheet.');
@@ -197,7 +241,15 @@ var QuizSlidesService = (function () {
 
         duplicatedSlide.move(insertionIndex + insertedSlides.length);
 
-        if (renderItem.type !== 'static') {
+        if (renderItem.type === 'standings') {
+          populateStandingsSlide(
+            duplicatedSlide,
+            renderItem.standingsData,
+            getSlidePosition(presentation, duplicatedSlide)
+          );
+          clearMarker(duplicatedSlide, markerForType(renderItem.type));
+          standingsSlideIds.push(duplicatedSlide.getObjectId());
+        } else if (renderItem.type !== 'static') {
           replaceTokensOnSlide(
             duplicatedSlide,
             renderItem.replacements,
@@ -212,6 +264,8 @@ var QuizSlidesService = (function () {
     });
 
     removeRoundTemplateBlocks(templateBlocks);
+
+    return standingsSlideIds;
   }
 
   function fillRiskSection(presentation, riskData) {
@@ -314,6 +368,7 @@ var QuizSlidesService = (function () {
     var answerSlots = buildAnswerTemplateSlotSequence();
     var slots = [];
     var staticSlots = [];
+    var trailingSlots = [];
     var cursor = startIndex;
     var i;
 
@@ -354,7 +409,7 @@ var QuizSlidesService = (function () {
         break;
       }
 
-      if (staticSlideType) {
+      if (staticSlideType && staticSlideType !== 'standings') {
         throw new Error(
           'Template round block ' + blockNumber +
           ' contains unexpected "' + staticSlideType +
@@ -363,11 +418,11 @@ var QuizSlidesService = (function () {
       }
 
       staticSlots.push({
-        type: 'static',
+        type: staticSlideType || 'static',
         slide: staticSlide
       });
       slots.push({
-        type: 'static',
+        type: staticSlideType || 'static',
         slide: staticSlide
       });
       cursor += 1;
@@ -408,10 +463,30 @@ var QuizSlidesService = (function () {
       cursor += 1;
     }
 
+    while (cursor < slides.length) {
+      var trailingSlide = slides[cursor];
+      var trailingSlideType = detectQuizSlideType(presentation, trailingSlide, cursor + 1);
+
+      if (trailingSlideType !== 'standings') {
+        break;
+      }
+
+      trailingSlots.push({
+        type: 'standings',
+        slide: trailingSlide
+      });
+      slots.push({
+        type: 'standings',
+        slide: trailingSlide
+      });
+      cursor += 1;
+    }
+
     return {
       startIndex: startIndex,
       endIndex: cursor - 1,
       staticSlots: staticSlots,
+      trailingSlots: trailingSlots,
       slots: slots
     };
   }
@@ -498,6 +573,85 @@ var QuizSlidesService = (function () {
       questionSlide: slides[questionIndex],
       answerSlide: slides[answerIndex]
     };
+  }
+
+  function getStandingsData() {
+    var standingsSheet = getStandingsSpreadsheet().getSheetByName(QUIZ_CONFIG.STANDINGS.SHEET_NAME);
+    var firstRow = QUIZ_CONFIG.STANDINGS.FIRST_DATA_ROW;
+    var pointsColumn = QUIZ_CONFIG.STANDINGS.POINTS_COLUMN;
+    var lastRow;
+    var values;
+
+    if (!standingsSheet) {
+      throw new Error('Missing standings sheet "' + QUIZ_CONFIG.STANDINGS.SHEET_NAME + '".');
+    }
+
+    lastRow = standingsSheet.getLastRow();
+    if (lastRow < firstRow) {
+      return [];
+    }
+
+    values = standingsSheet.getRange(firstRow, 1, lastRow - firstRow + 1, pointsColumn).getValues();
+
+    return values
+      .map(function (row, index) {
+        return {
+          position: toDisplayString(row[QUIZ_CONFIG.STANDINGS.POSITION_COLUMN - 1]) ||
+            String(index + 1),
+          teamName: toDisplayString(row[QUIZ_CONFIG.STANDINGS.TEAM_COLUMN - 1]),
+          points: toDisplayString(row[QUIZ_CONFIG.STANDINGS.POINTS_COLUMN - 1])
+        };
+      })
+      .filter(function (row) {
+        return !!row.teamName;
+      })
+      .slice(0, QUIZ_CONFIG.STANDINGS.MAX_TEAMS);
+  }
+
+  function populateStandingsSlide(slide, standingsData, slideIndex) {
+    var table = findStandingsTable(slide, slideIndex);
+    var maxTeams = QUIZ_CONFIG.STANDINGS.MAX_TEAMS;
+    var i;
+
+    for (i = 0; i < maxTeams; i += 1) {
+      var row = standingsData[i] || {};
+      var tableRow = i + 1;
+
+      setTableCellText(table, tableRow, 0, row.position || '');
+      setTableCellText(table, tableRow, 1, row.teamName || '');
+      setTableCellText(table, tableRow, 2, row.points || '');
+    }
+  }
+
+  function findStandingsTable(slide, slideIndex) {
+    var table = null;
+
+    slide.getPageElements().forEach(function (element) {
+      if (!table && element.getPageElementType() === SlidesApp.PageElementType.TABLE) {
+        table = element.asTable();
+      }
+    });
+
+    if (!table) {
+      throw new Error('Standings slide ' + slideIndex + ' is missing a table.');
+    }
+
+    if (table.getNumRows() < QUIZ_CONFIG.STANDINGS.MAX_TEAMS + 1 || table.getNumColumns() < 3) {
+      throw new Error(
+        'Standings slide ' + slideIndex + ' table must have at least ' +
+        (QUIZ_CONFIG.STANDINGS.MAX_TEAMS + 1) + ' rows and 3 columns.'
+      );
+    }
+
+    return table;
+  }
+
+  function setTableCellText(table, rowIndex, columnIndex, value) {
+    table.getCell(rowIndex, columnIndex).getText().setText(value);
+  }
+
+  function getStandingsSpreadsheet() {
+    return SpreadsheetApp.openById(QUIZ_CONFIG.STANDINGS.SPREADSHEET_ID);
   }
 
   function flattenRiskQuestions(categories) {
@@ -637,7 +791,8 @@ var QuizSlidesService = (function () {
       [
         { type: 'topic', marker: QUIZ_CONFIG.TEMPLATE_MARKERS.TOPIC },
         { type: 'question', marker: QUIZ_CONFIG.TEMPLATE_MARKERS.QUESTION },
-        { type: 'answer', marker: QUIZ_CONFIG.TEMPLATE_MARKERS.ANSWER }
+        { type: 'answer', marker: QUIZ_CONFIG.TEMPLATE_MARKERS.ANSWER },
+        { type: 'standings', marker: QUIZ_CONFIG.TEMPLATE_MARKERS.ROUND_STANDINGS }
       ]
     );
   }
@@ -695,6 +850,19 @@ var QuizSlidesService = (function () {
     page.getPageElements().forEach(function (element) {
       if (element.getPageElementType() === SlidesApp.PageElementType.SHAPE) {
         textParts.push(element.asShape().getText().asString());
+      } else if (element.getPageElementType() === SlidesApp.PageElementType.TABLE) {
+        var table = element.asTable();
+        var rowCount = table.getNumRows();
+        var rowIndex;
+        var columnIndex;
+
+        for (rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+          var columnCount = table.getRow(rowIndex).getNumCells();
+
+          for (columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+            textParts.push(table.getCell(rowIndex, columnIndex).getText().asString());
+          }
+        }
       }
     });
 
@@ -743,6 +911,9 @@ var QuizSlidesService = (function () {
     }
     if (type === 'question') {
       return QUIZ_CONFIG.TEMPLATE_MARKERS.QUESTION;
+    }
+    if (type === 'standings') {
+      return QUIZ_CONFIG.TEMPLATE_MARKERS.ROUND_STANDINGS;
     }
     return QUIZ_CONFIG.TEMPLATE_MARKERS.ANSWER;
   }
@@ -843,6 +1014,14 @@ var QuizSlidesService = (function () {
     return '{{RISK_MENU_' + topicIndex + '_' + questionIndex + '}}';
   }
 
+  function toDisplayString(value) {
+    if (value === null || value === undefined || value === '') {
+      return '';
+    }
+
+    return String(value).trim();
+  }
+
   function formatPointsLabel(points) {
     if (points === 1) {
       return '1 bod';
@@ -858,6 +1037,7 @@ var QuizSlidesService = (function () {
       topicSlides: 0,
       questionSlides: 0,
       answerSlides: 0,
+      standingsSlides: 0,
       beerBonusQuestionSlides: beerBonus ? 1 : 0,
       beerBonusAnswerSlides: beerBonus ? 1 : 0,
       riskTopicCount: riskData.categories.length,
@@ -873,6 +1053,8 @@ var QuizSlidesService = (function () {
           summary.questionSlides += 1;
         } else if (item.type === 'answer') {
           summary.answerSlides += 1;
+        } else if (item.type === 'standings') {
+          summary.standingsSlides += 1;
         }
       });
     });
@@ -883,6 +1065,105 @@ var QuizSlidesService = (function () {
     });
 
     return summary;
+  }
+
+  function storeLastGeneratedPresentationState(presentation, standingsSlideIds) {
+    var properties = PropertiesService.getScriptProperties();
+    var serializedSlideIds = JSON.stringify(standingsSlideIds || []);
+
+    properties.setProperty(QUIZ_CONFIG.STANDINGS.LAST_PRESENTATION_PROPERTY, presentation.getId());
+    properties.setProperty(QUIZ_CONFIG.STANDINGS.LAST_STANDINGS_SLIDES_PROPERTY, serializedSlideIds);
+
+    setStandingsMetaValue(QUIZ_CONFIG.STANDINGS.LAST_PRESENTATION_PROPERTY, presentation.getId());
+    setStandingsMetaValue(QUIZ_CONFIG.STANDINGS.LAST_STANDINGS_SLIDES_PROPERTY, serializedSlideIds);
+  }
+
+  function getStoredStandingsState() {
+    var presentationId = getStandingsMetaValue(QUIZ_CONFIG.STANDINGS.LAST_PRESENTATION_PROPERTY) ||
+      PropertiesService.getScriptProperties().getProperty(QUIZ_CONFIG.STANDINGS.LAST_PRESENTATION_PROPERTY);
+    var serializedSlideIds = getStandingsMetaValue(QUIZ_CONFIG.STANDINGS.LAST_STANDINGS_SLIDES_PROPERTY) ||
+      PropertiesService.getScriptProperties().getProperty(QUIZ_CONFIG.STANDINGS.LAST_STANDINGS_SLIDES_PROPERTY);
+    var standingsSlideIds = parseStoredSlideIds(serializedSlideIds);
+
+    if (!presentationId) {
+      throw new Error('No generated presentation is stored for standings refresh yet.');
+    }
+
+    if (!standingsSlideIds.length) {
+      throw new Error('No stored standings slide IDs were found for refresh.');
+    }
+
+    return {
+      presentationId: presentationId,
+      standingsSlideIds: standingsSlideIds
+    };
+  }
+
+  function parseStoredSlideIds(serializedSlideIds) {
+    if (!serializedSlideIds) {
+      return [];
+    }
+
+    try {
+      var parsed = JSON.parse(serializedSlideIds);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      throw new Error('Stored standings slide IDs are invalid JSON.');
+    }
+  }
+
+  function getStandingsMetaSheet() {
+    var spreadsheet = getStandingsSpreadsheet();
+    var sheet = spreadsheet.getSheetByName(QUIZ_CONFIG.STANDINGS.META_SHEET_NAME);
+
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet(QUIZ_CONFIG.STANDINGS.META_SHEET_NAME);
+      sheet.hideSheet();
+    }
+
+    return sheet;
+  }
+
+  function setStandingsMetaValue(key, value) {
+    var sheet = getStandingsMetaSheet();
+    var row = findMetaRow(sheet, key);
+
+    if (row === -1) {
+      row = Math.max(sheet.getLastRow() + 1, 1);
+    }
+
+    sheet.getRange(row, 1, 1, 2).setValues([[key, value]]);
+  }
+
+  function getStandingsMetaValue(key) {
+    var sheet = getStandingsMetaSheet();
+    var row = findMetaRow(sheet, key);
+
+    if (row === -1) {
+      return '';
+    }
+
+    return toDisplayString(sheet.getRange(row, 2).getValue());
+  }
+
+  function findMetaRow(sheet, key) {
+    var lastRow = sheet.getLastRow();
+    var values;
+    var i;
+
+    if (!lastRow) {
+      return -1;
+    }
+
+    values = sheet.getRange(1, 1, lastRow, 1).getValues();
+
+    for (i = 0; i < values.length; i += 1) {
+      if (toDisplayString(values[i][0]) === key) {
+        return i + 1;
+      }
+    }
+
+    return -1;
   }
 
   function movePresentationToSpreadsheetFolder(presentation, spreadsheet) {

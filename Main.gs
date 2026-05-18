@@ -2,6 +2,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu(QUIZ_CONFIG.MENU_NAME)
     .addItem(QUIZ_CONFIG.MENU_ACTION_GENERATE, 'generateQuizPresentation')
+    .addItem(QUIZ_CONFIG.MENU_ACTION_REFRESH_STANDINGS, 'refreshStandingsSlides')
     .addToUi();
 }
 
@@ -17,6 +18,7 @@ function generateQuizPresentation() {
       'Filled topic slides: ' + result.stats.topicSlides + '\n' +
       'Filled question slides: ' + result.stats.questionSlides + '\n' +
       'Filled answer slides: ' + result.stats.answerSlides + '\n' +
+      'Standings slides: ' + result.stats.standingsSlides + '\n' +
       'Beer bonus question slides: ' + result.stats.beerBonusQuestionSlides + '\n' +
       'Beer bonus answer slides: ' + result.stats.beerBonusAnswerSlides + '\n' +
       'Risk topics: ' + result.stats.riskTopicCount + '\n' +
@@ -27,6 +29,15 @@ function generateQuizPresentation() {
     );
   } catch (error) {
     SpreadsheetApp.getUi().alert('Generation failed:\n' + error.message);
+    throw error;
+  }
+}
+
+function refreshStandingsSlides() {
+  try {
+    QuizSlidesService.refreshStandingsSlides();
+  } catch (error) {
+    SpreadsheetApp.getUi().alert('Standings refresh failed:\n' + error.message);
     throw error;
   }
 }
