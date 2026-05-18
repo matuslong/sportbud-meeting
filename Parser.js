@@ -2,13 +2,14 @@ var QuizParser = (function () {
   function parseSpreadsheet(spreadsheet) {
     var baseSheet = getBaseSheet(spreadsheet);
     var riskSheet = spreadsheet.getSheetByName(QUIZ_CONFIG.RISK.SHEET_NAME);
-    var rounds = parseBaseSheet(baseSheet);
+    var baseQuiz = parseBaseSheet(baseSheet);
     var risk = parseRiskSheet(riskSheet);
 
     return {
       sourceSheetName: baseSheet.getName(),
       generatedAt: new Date(),
-      rounds: rounds,
+      rounds: baseQuiz.rounds,
+      beerBonus: baseQuiz.beerBonus,
       risk: risk
     };
   }
@@ -97,8 +98,36 @@ var QuizParser = (function () {
     var rounds = [];
     var currentRound = createRound(1);
     var currentTopic = null;
+    var beerBonus = null;
 
     rows.forEach(function (row) {
+      if (isBeerBonusRow(row)) {
+        if (beerBonus) {
+          throw new Error('Beer bonus can only appear once. Row ' + row.rowNumber);
+        }
+        if (currentRound.topics.length || currentRound.bonusQuestion) {
+          throw new Error(
+            'Beer bonus must appear only after the last completed round. Row ' + row.rowNumber
+          );
+        }
+        if (!rounds.length) {
+          throw new Error('Beer bonus requires at least one completed round. Row ' + row.rowNumber);
+        }
+        if (!row.text || !row.answer) {
+          throw new Error('Beer bonus is incomplete at row ' + row.rowNumber + '.');
+        }
+
+        beerBonus = {
+          type: 'beerBonus',
+          order: 'P',
+          topicTitle: 'Pivný bonus',
+          question: row.text,
+          answer: row.answer,
+          rowNumber: row.rowNumber
+        };
+        return;
+      }
+
       if (isBonusRow(row)) {
         if (currentRound.bonusQuestion) {
           throw new Error(
@@ -162,7 +191,10 @@ var QuizParser = (function () {
       throw new Error('No complete rounds detected in sheet.');
     }
 
-    return rounds;
+    return {
+      rounds: rounds,
+      beerBonus: beerBonus
+    };
   }
 
   function parseRiskCategories(rows) {
@@ -325,6 +357,10 @@ var QuizParser = (function () {
 
   function isBonusRow(row) {
     return row.orderRaw.toUpperCase() === 'B';
+  }
+
+  function isBeerBonusRow(row) {
+    return row.orderRaw.toUpperCase() === 'P';
   }
 
   function isTopicHeaderRow(row) {

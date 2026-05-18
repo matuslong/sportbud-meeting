@@ -19,12 +19,13 @@ var QuizSlidesService = (function () {
     roundBlocks = buildRoundBlocks(parsedQuiz.rounds, templateBlocks);
 
     fillQuizTemplateSlides(presentation, roundBlocks, templateBlocks);
+    fillBeerBonusSection(presentation, parsedQuiz.beerBonus);
     fillRiskSection(presentation, parsedQuiz.risk);
     movePresentationToSpreadsheetFolder(presentation, spreadsheet);
 
     return {
       presentation: presentation,
-      stats: summarizePresentation(roundBlocks, parsedQuiz.risk)
+      stats: summarizePresentation(roundBlocks, parsedQuiz.beerBonus, parsedQuiz.risk)
     };
   }
 
@@ -245,6 +246,35 @@ var QuizSlidesService = (function () {
 
   }
 
+  function fillBeerBonusSection(presentation, beerBonus) {
+    if (!beerBonus) {
+      return;
+    }
+
+    var template = findBeerBonusTemplate(presentation);
+
+    replaceTokensOnSlide(
+      template.questionSlide,
+      [
+        { token: QUIZ_CONFIG.TEMPLATE_TOKENS.QUESTION_TEXT, value: beerBonus.question }
+      ],
+      'question',
+      getSlidePosition(presentation, template.questionSlide)
+    );
+    clearMarker(template.questionSlide, QUIZ_CONFIG.TEMPLATE_MARKERS.BEER_BONUS_QUESTION);
+
+    replaceTokensOnSlide(
+      template.answerSlide,
+      [
+        { token: QUIZ_CONFIG.TEMPLATE_TOKENS.QUESTION_TEXT, value: beerBonus.question },
+        { token: QUIZ_CONFIG.TEMPLATE_TOKENS.ANSWER_TEXT, value: beerBonus.answer }
+      ],
+      'answer',
+      getSlidePosition(presentation, template.answerSlide)
+    );
+    clearMarker(template.answerSlide, QUIZ_CONFIG.TEMPLATE_MARKERS.BEER_BONUS_ANSWER);
+  }
+
   function findRoundTemplateBlocks(presentation) {
     var slides = presentation.getSlides();
     var blocks = [];
@@ -446,6 +476,27 @@ var QuizSlidesService = (function () {
     return {
       menuSlide: slides[menuIndex],
       pairs: pairs
+    };
+  }
+
+  function findBeerBonusTemplate(presentation) {
+    var slides = presentation.getSlides();
+    var questionIndex = findSlideIndexByMarker(
+      slides,
+      QUIZ_CONFIG.TEMPLATE_MARKERS.BEER_BONUS_QUESTION
+    );
+    var answerIndex = findSlideIndexByMarker(
+      slides,
+      QUIZ_CONFIG.TEMPLATE_MARKERS.BEER_BONUS_ANSWER
+    );
+
+    if (questionIndex === -1 || answerIndex === -1) {
+      throw new Error('Template is missing one or more beer bonus slides.');
+    }
+
+    return {
+      questionSlide: slides[questionIndex],
+      answerSlide: slides[answerIndex]
     };
   }
 
@@ -759,6 +810,9 @@ var QuizSlidesService = (function () {
 
     shapes.forEach(function (shape) {
       shape.getText().getTextStyle().setLinkSlide(targetSlide);
+      shape.getText().getTextStyle()
+        .setForegroundColor(QUIZ_CONFIG.RISK.BACK_LINK_COLOR)
+        .setUnderline(false);
     });
   }
 
@@ -799,11 +853,13 @@ var QuizSlidesService = (function () {
     return points + ' bodů';
   }
 
-  function summarizePresentation(roundBlocks, riskData) {
+  function summarizePresentation(roundBlocks, beerBonus, riskData) {
     var summary = {
       topicSlides: 0,
       questionSlides: 0,
       answerSlides: 0,
+      beerBonusQuestionSlides: beerBonus ? 1 : 0,
+      beerBonusAnswerSlides: beerBonus ? 1 : 0,
       riskTopicCount: riskData.categories.length,
       riskQuestionSlides: 0,
       riskAnswerSlides: 0

@@ -10,7 +10,7 @@ Google Apps Script na naplnenie Google Slides prezentacie zo zdrojoveho Google S
 - `appsscript.json` - Apps Script manifest pre `clasp`
 
 ## Datovy format v sheete
-- Stlpec A: cislo otazky (`1`, `2`, ...) alebo `B` pre bonus
+- Stlpec A: cislo otazky (`1`, `2`, ...), `B` pre bonus, `P` pre zaverecny pivny bonus
 - Stlpec B: nazov temy (hlavicka) alebo text otazky
 - Stlpec C: odpoved
 - Kazda tema ma 4 otazky
@@ -42,8 +42,11 @@ Google Apps Script na naplnenie Google Slides prezentacie zo zdrojoveho Google S
    - `{{QUESTION_TEXT}}`
    - `{{ANSWER_LABEL}}`
    - `{{ANSWER_TEXT}}`
-7. Skript pri generovani skopiruje kazdy round block pre zodpovedajuce kolo, naplni ho textami a povodne template bloky z vyslednej prezentacie odstrani.
-8. Staticke slidy pred prvym round blockom a po poslednom round blocku ostanu zachovane.
+7. Pre zaverecny pivny bonus pridaj samostatne slidy s markermi:
+   - `{{BEER_BONUS_QUESTION_SLIDE}}` s placeholderom `{{QUESTION_TEXT}}`
+   - `{{BEER_BONUS_ANSWER_SLIDE}}` s placeholdermi `{{QUESTION_TEXT}}` a `{{ANSWER_TEXT}}`
+8. Skript pri generovani skopiruje kazdy round block pre zodpovedajuce kolo, naplni ho textami a povodne template bloky z vyslednej prezentacie odstrani.
+9. Staticke slidy pred prvym round blockom a po poslednom round blocku ostanu zachovane.
 
 ## Clasp workflow
 `clasp` je bezplatne CLI pre Google Apps Script. V tomto repozitari je uz nastavene lokalne cez `npm`.

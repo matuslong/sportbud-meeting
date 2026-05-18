@@ -17,6 +17,8 @@ function generateQuizPresentation() {
       'Filled topic slides: ' + result.stats.topicSlides + '\n' +
       'Filled question slides: ' + result.stats.questionSlides + '\n' +
       'Filled answer slides: ' + result.stats.answerSlides + '\n' +
+      'Beer bonus question slides: ' + result.stats.beerBonusQuestionSlides + '\n' +
+      'Beer bonus answer slides: ' + result.stats.beerBonusAnswerSlides + '\n' +
       'Risk topics: ' + result.stats.riskTopicCount + '\n' +
       'Risk question slides: ' + result.stats.riskQuestionSlides + '\n' +
       'Risk answer slides: ' + result.stats.riskAnswerSlides + '\n' +
