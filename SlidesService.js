@@ -1183,6 +1183,7 @@ var QuizSlidesService = (function () {
   }
 
   return {
-    createPresentation: createPresentation
+    createPresentation: createPresentation,
+    refreshStandingsSlides: refreshStandingsSlides
   };
 })();
