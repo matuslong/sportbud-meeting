@@ -49,3 +49,16 @@ Rounds
 - Beer bonus slides
 - Riskuj presentation generation
 - Refresh Standings Slides — updates leaderboard tables in an existing presentation; state persisted to hidden `__sportbud_meta` sheet
+
+## Standings refresh behavior
+
+- The generator stores the last generated presentation ID and the standings slide bindings in the hidden `__sportbud_meta` sheet.
+- `Refresh Standings Slides` updates only the stored standings slides. It does not regenerate the full deck.
+- Standings slides can be implemented either with text placeholders or with a rendered table layout in the template.
+- Refresh first tries to use stored bindings, then self-heals them from standings tokens or from a rendered standings table if needed.
+- This keeps refresh working even after the placeholders on the slide have already been replaced with real values.
+- Current standings mapping expects:
+  - data sheet `Aktuální kolo`
+  - 14 teams maximum
+  - round-point columns `1. kolo` to `4. kolo`
+  - total-points column `Celkově`

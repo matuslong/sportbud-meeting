@@ -37,6 +37,7 @@ var QuizSlidesService = (function () {
     var standingsData = getStandingsData();
     var presentation = SlidesApp.openById(state.presentationId);
     var slideMap = {};
+    var stateChanged = false;
 
     presentation.getSlides().forEach(function (slide) {
       slideMap[slide.getObjectId()] = slide;
@@ -52,6 +53,25 @@ var QuizSlidesService = (function () {
 
       if (!roundNumber) {
         roundNumber = detectStandingsRoundNumber(slide, getSlidePosition(presentation, slide));
+        slideState.roundNumber = roundNumber;
+        stateChanged = true;
+      }
+
+      var normalizedBindings = normalizeStoredStandingsBindings(slideState.bindings);
+
+      if (normalizedBindings !== slideState.bindings) {
+        stateChanged = true;
+      }
+
+      slideState.bindings = normalizedBindings;
+
+      if (!slideState.bindings || !canPopulateStandingsSlideByBindings(slide, slideState.bindings)) {
+        slideState.bindings = recaptureStandingsBindings(
+          slide,
+          roundNumber,
+          getSlidePosition(presentation, slide)
+        );
+        stateChanged = true;
       }
 
       if (slideState.bindings) {
@@ -71,6 +91,10 @@ var QuizSlidesService = (function () {
         );
       }
     });
+
+    if (stateChanged) {
+      storeLastGeneratedPresentationState(presentation, state.standingsSlideIds);
+    }
   }
 
   function validateTemplateConfig() {
@@ -768,42 +792,68 @@ var QuizSlidesService = (function () {
   }
 
   function populateRenderedStandingsSlideByBindings(slide, bindings, standingsData, roundNumber, slideIndex) {
-    var shapeMap = getShapeMapForSlide(slide);
-    var headerShape = shapeMap[bindings.headerShapeId];
+    var elementMaps = getStandingsElementMapsForSlide(slide);
+    var headerText = getBoundStandingsTextRange(
+      elementMaps,
+      bindings && bindings.headerTarget,
+      slideIndex
+    );
     var maxTeams = QUIZ_CONFIG.STANDINGS.MAX_TEAMS;
     var i;
 
-    if (!headerShape) {
-      throw new Error('Missing standings header shape on slide ' + slideIndex + '.');
-    }
-
-    headerShape.getText().setText(QUIZ_CONFIG.STANDINGS.ROUND_HEADER_LABEL);
+    headerText.setText(QUIZ_CONFIG.STANDINGS.ROUND_HEADER_LABEL);
 
     for (i = 0; i < maxTeams; i += 1) {
       var row = standingsData[i] || {};
       var rowBinding = bindings.rows[i];
-      var positionShape;
-      var teamShape;
-      var roundPointsShape;
-      var totalPointsShape;
+      var positionText;
+      var teamText;
+      var roundPointsText;
+      var totalPointsText;
 
       if (!rowBinding) {
         throw new Error('Missing standings row binding ' + (i + 1) + ' on slide ' + slideIndex + '.');
       }
 
-      positionShape = shapeMap[rowBinding.positionShapeId];
-      teamShape = shapeMap[rowBinding.teamShapeId];
-      roundPointsShape = shapeMap[rowBinding.roundPointsShapeId];
-      totalPointsShape = shapeMap[rowBinding.totalPointsShapeId];
+      positionText = getBoundStandingsTextRange(elementMaps, rowBinding.positionTarget, slideIndex);
+      teamText = getBoundStandingsTextRange(elementMaps, rowBinding.teamTarget, slideIndex);
+      roundPointsText = getBoundStandingsTextRange(elementMaps, rowBinding.roundPointsTarget, slideIndex);
+      totalPointsText = getBoundStandingsTextRange(elementMaps, rowBinding.totalPointsTarget, slideIndex);
 
-      if (!positionShape || !teamShape || !roundPointsShape || !totalPointsShape) {
-        throw new Error('Missing one or more bound standings shapes on slide ' + slideIndex + '.');
+      positionText.setText(row.position || '');
+      teamText.setText(row.teamName || '');
+      roundPointsText.setText(getRoundPointsValue(row, roundNumber));
+      totalPointsText.setText(row.totalPoints || '');
+    }
+  }
+
+  function canPopulateStandingsSlideByBindings(slide, bindings) {
+    try {
+      validateStandingsBindings(slide, bindings, null);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function validateStandingsBindings(slide, bindings, slideIndex) {
+    var elementMaps = getStandingsElementMapsForSlide(slide);
+    var maxTeams = QUIZ_CONFIG.STANDINGS.MAX_TEAMS;
+    var i;
+
+    getBoundStandingsTextRange(elementMaps, bindings && bindings.headerTarget, slideIndex);
+
+    for (i = 0; i < maxTeams; i += 1) {
+      var rowBinding = bindings && bindings.rows ? bindings.rows[i] : null;
+
+      if (!rowBinding) {
+        throw new Error('Missing standings row binding ' + (i + 1) + buildStandingsSlideSuffix(slideIndex) + '.');
       }
 
-      positionShape.getText().setText(row.position || '');
-      teamShape.getText().setText(row.teamName || '');
-      roundPointsShape.getText().setText(getRoundPointsValue(row, roundNumber));
-      totalPointsShape.getText().setText(row.totalPoints || '');
+      getBoundStandingsTextRange(elementMaps, rowBinding.positionTarget, slideIndex);
+      getBoundStandingsTextRange(elementMaps, rowBinding.teamTarget, slideIndex);
+      getBoundStandingsTextRange(elementMaps, rowBinding.roundPointsTarget, slideIndex);
+      getBoundStandingsTextRange(elementMaps, rowBinding.totalPointsTarget, slideIndex);
     }
   }
 
@@ -945,55 +995,274 @@ var QuizSlidesService = (function () {
   function captureStandingsBindings(slide, roundNumber, slideIndex) {
     var maxTeams = QUIZ_CONFIG.STANDINGS.MAX_TEAMS;
     var bindings = {
-      headerShapeId: getSingleShapeIdForToken(slide, roundMarkerForNumber(roundNumber), slideIndex),
+      headerTarget: getSingleStandingsTargetForToken(slide, roundMarkerForNumber(roundNumber), slideIndex),
       rows: []
     };
     var i;
 
     for (i = 1; i <= maxTeams; i += 1) {
       bindings.rows.push({
-        positionShapeId: getSingleShapeIdForToken(slide, standingsPositionToken(i), slideIndex),
-        teamShapeId: getSingleShapeIdForToken(slide, standingsTeamToken(i), slideIndex),
-        roundPointsShapeId: getSingleShapeIdForToken(slide, standingsRoundPointsToken(i), slideIndex),
-        totalPointsShapeId: getSingleShapeIdForToken(slide, standingsTotalPointsToken(i), slideIndex)
+        positionTarget: getSingleStandingsTargetForToken(slide, standingsPositionToken(i), slideIndex),
+        teamTarget: getSingleStandingsTargetForToken(slide, standingsTeamToken(i), slideIndex),
+        roundPointsTarget: getSingleStandingsTargetForToken(slide, standingsRoundPointsToken(i), slideIndex),
+        totalPointsTarget: getSingleStandingsTargetForToken(slide, standingsTotalPointsToken(i), slideIndex)
       });
     }
 
     return bindings;
   }
 
-  function getSingleShapeIdForToken(slide, token, slideIndex) {
-    var shapes = findShapesContainingText(slide, token);
+  function recaptureStandingsBindings(slide, roundNumber, slideIndex) {
+    if (hasStandingsTokens(slide)) {
+      return captureStandingsBindings(slide, roundNumber, slideIndex);
+    }
 
-    if (shapes.length !== 1) {
+    try {
+      return captureStandingsTableBindings(slide, slideIndex);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function captureStandingsTableBindings(slide, slideIndex) {
+    var maxTeams = QUIZ_CONFIG.STANDINGS.MAX_TEAMS;
+    var tables = getStandingsTablesOnSlide(slide);
+    var table;
+    var bindings;
+    var i;
+
+    if (tables.length !== 1) {
       throw new Error(
-        'Expected exactly one standings shape containing "' + token + '" on slide ' +
+        'Standings slide ' + slideIndex + ' must contain exactly one standings table.'
+      );
+    }
+
+    table = tables[0];
+    bindings = {
+      headerTarget: createTableCellTarget(table.getObjectId(), 0, 2),
+      rows: []
+    };
+
+    for (i = 1; i <= maxTeams; i += 1) {
+      bindings.rows.push({
+        positionTarget: createTableCellTarget(table.getObjectId(), i, 0),
+        teamTarget: createTableCellTarget(table.getObjectId(), i, 1),
+        roundPointsTarget: createTableCellTarget(table.getObjectId(), i, 2),
+        totalPointsTarget: createTableCellTarget(table.getObjectId(), i, 3)
+      });
+    }
+
+    return bindings;
+  }
+
+  function getSingleStandingsTargetForToken(slide, token, slideIndex) {
+    var targets = findStandingsTargetsContainingText(slide, token);
+
+    if (targets.length !== 1) {
+      throw new Error(
+        'Expected exactly one standings target containing "' + token + '" on slide ' +
         slideIndex + '.'
       );
     }
 
-    return shapes[0].getObjectId();
+    return targets[0];
   }
 
-  function getShapeMapForSlide(slide) {
+  function getStandingsElementMapsForSlide(slide) {
     var shapeMap = {};
+    var tableMap = {};
 
     slide.getPageElements().forEach(function (element) {
-      collectShapeMapEntries(element, shapeMap);
+      collectStandingsElementMapEntries(element, shapeMap, tableMap);
     });
 
-    return shapeMap;
+    return {
+      shapeMap: shapeMap,
+      tableMap: tableMap
+    };
   }
 
-  function collectShapeMapEntries(element, shapeMap) {
+  function collectStandingsElementMapEntries(element, shapeMap, tableMap) {
     if (element.getPageElementType() === SlidesApp.PageElementType.SHAPE) {
       shapeMap[element.getObjectId()] = element.asShape();
       return;
     }
 
+    if (element.getPageElementType() === SlidesApp.PageElementType.TABLE) {
+      tableMap[element.getObjectId()] = element.asTable();
+      return;
+    }
+
     if (element.getPageElementType() === SlidesApp.PageElementType.GROUP) {
       element.asGroup().getChildren().forEach(function (child) {
-        collectShapeMapEntries(child, shapeMap);
+        collectStandingsElementMapEntries(child, shapeMap, tableMap);
+      });
+    }
+  }
+
+  function findStandingsTargetsContainingText(slide, searchText) {
+    var matches = [];
+
+    slide.getPageElements().forEach(function (element) {
+      collectMatchingStandingsTargetsFromElement(element, searchText, matches);
+    });
+
+    return matches;
+  }
+
+  function collectMatchingStandingsTargetsFromElement(element, searchText, matches) {
+    var rowCount;
+    var rowIndex;
+    var columnCount;
+    var columnIndex;
+    var cellText;
+
+    if (element.getPageElementType() === SlidesApp.PageElementType.SHAPE) {
+      var shape = element.asShape();
+      if (shape.getText().asString().indexOf(searchText) !== -1) {
+        matches.push(createShapeTarget(shape.getObjectId()));
+      }
+      return;
+    }
+
+    if (element.getPageElementType() === SlidesApp.PageElementType.TABLE) {
+      rowCount = element.asTable().getNumRows();
+
+      for (rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+        columnCount = element.asTable().getRow(rowIndex).getNumCells();
+
+        for (columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+          cellText = element.asTable().getCell(rowIndex, columnIndex).getText().asString();
+
+          if (cellText.indexOf(searchText) !== -1) {
+            matches.push(
+              createTableCellTarget(element.getObjectId(), rowIndex, columnIndex)
+            );
+          }
+        }
+      }
+      return;
+    }
+
+    if (element.getPageElementType() === SlidesApp.PageElementType.GROUP) {
+      element.asGroup().getChildren().forEach(function (child) {
+        collectMatchingStandingsTargetsFromElement(child, searchText, matches);
+      });
+    }
+  }
+
+  function createShapeTarget(shapeId) {
+    return {
+      type: 'shape',
+      shapeId: shapeId
+    };
+  }
+
+  function createTableCellTarget(tableId, rowIndex, columnIndex) {
+    return {
+      type: 'tableCell',
+      tableId: tableId,
+      rowIndex: rowIndex,
+      columnIndex: columnIndex
+    };
+  }
+
+  function normalizeStoredStandingsBindings(bindings) {
+    if (!bindings) {
+      return null;
+    }
+
+    if (bindings.headerTarget && Array.isArray(bindings.rows)) {
+      return bindings;
+    }
+
+    if (!bindings.headerShapeId || !Array.isArray(bindings.rows)) {
+      return null;
+    }
+
+    return {
+      headerTarget: createShapeTarget(bindings.headerShapeId),
+      rows: bindings.rows.map(function (rowBinding) {
+        if (!rowBinding) {
+          return null;
+        }
+
+        return {
+          positionTarget: rowBinding.positionTarget || createShapeTarget(rowBinding.positionShapeId),
+          teamTarget: rowBinding.teamTarget || createShapeTarget(rowBinding.teamShapeId),
+          roundPointsTarget: rowBinding.roundPointsTarget || createShapeTarget(rowBinding.roundPointsShapeId),
+          totalPointsTarget: rowBinding.totalPointsTarget || createShapeTarget(rowBinding.totalPointsShapeId)
+        };
+      })
+    };
+  }
+
+  function getBoundStandingsTextRange(elementMaps, target, slideIndex) {
+    var table;
+    var row;
+
+    if (!target || !target.type) {
+      throw new Error('Missing standings binding target' + buildStandingsSlideSuffix(slideIndex) + '.');
+    }
+
+    if (target.type === 'shape') {
+      var shape = elementMaps.shapeMap[target.shapeId];
+
+      if (!shape) {
+        throw new Error('Missing bound standings shape' + buildStandingsSlideSuffix(slideIndex) + '.');
+      }
+
+      return shape.getText();
+    }
+
+    if (target.type === 'tableCell') {
+      table = elementMaps.tableMap[target.tableId];
+
+      if (!table) {
+        throw new Error('Missing bound standings table' + buildStandingsSlideSuffix(slideIndex) + '.');
+      }
+      if (target.rowIndex >= table.getNumRows()) {
+        throw new Error('Missing bound standings table row' + buildStandingsSlideSuffix(slideIndex) + '.');
+      }
+
+      row = table.getRow(target.rowIndex);
+      if (target.columnIndex >= row.getNumCells()) {
+        throw new Error('Missing bound standings table cell' + buildStandingsSlideSuffix(slideIndex) + '.');
+      }
+
+      return table.getCell(target.rowIndex, target.columnIndex).getText();
+    }
+
+    throw new Error('Unsupported standings binding target type "' + target.type + '"' +
+      buildStandingsSlideSuffix(slideIndex) + '.');
+  }
+
+  function buildStandingsSlideSuffix(slideIndex) {
+    return slideIndex ? ' on slide ' + slideIndex : '';
+  }
+
+  function getStandingsTablesOnSlide(slide) {
+    var tables = [];
+
+    slide.getPageElements().forEach(function (element) {
+      collectStandingsTablesFromElement(element, tables);
+    });
+
+    return tables.filter(function (table) {
+      return table.getNumRows() >= QUIZ_CONFIG.STANDINGS.MAX_TEAMS + 1 &&
+        table.getRow(0).getNumCells() >= 4;
+    });
+  }
+
+  function collectStandingsTablesFromElement(element, tables) {
+    if (element.getPageElementType() === SlidesApp.PageElementType.TABLE) {
+      tables.push(element.asTable());
+      return;
+    }
+
+    if (element.getPageElementType() === SlidesApp.PageElementType.GROUP) {
+      element.asGroup().getChildren().forEach(function (child) {
+        collectStandingsTablesFromElement(child, tables);
       });
     }
   }
