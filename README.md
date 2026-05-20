@@ -20,6 +20,17 @@ Google Apps Script utility that generates pub quiz presentations in Google Slide
 
 > `.gs` files are local source mirrors — excluded from clasp pushes via `.claspignore`. Only `.js` files are deployed to Apps Script.
 
+## Reference materials
+
+- `assets/brand/` contains Sportbud brand source materials used for future presentation and product expansion.
+- `assets/brand/brand-colors.md` is the canonical reference for Sportbud brand colors.
+- `assets/others/current_web/` contains screenshots of the current web for visual and UX reference.
+- `assets/others/timers/` contains timer video assets for Riskuj flows.
+- `documentation/` contains supporting product and brand documents:
+  - `BRAND FOUNDATION.docx`
+  - `FUTURE VISION & PRODUCT EXPANSION.docx`
+  - `WEB & PRODUCT DOCUMENTATION.docx`
+
 ## Setup & deploy
 
 ```bash
