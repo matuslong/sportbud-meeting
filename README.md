@@ -9,6 +9,13 @@ Google Apps Script utility that generates pub quiz presentations in Google Slide
 3. Choose **Generate Presentation** to create a new Google Slides deck
 4. Optionally use **Refresh Standings Slides** to update leaderboard tables in an existing presentation without regenerating from scratch
 
+## Duplicating the quiz sheet
+
+- Duplicate the prepared master Google Sheet with **File → Make a copy**.
+- The copied sheet can be moved to another Google Drive folder.
+- After opening or reloading the copy, the **Quiz Tools** menu should appear automatically.
+- If the menu is missing in a copied sheet, open **Extensions → Apps Script** in that sheet and confirm the bound script exists; the master template must include the Apps Script project before it is copied.
+
 ## Project structure
 
 | File | Purpose |
@@ -46,6 +53,9 @@ npm run clasp:push
 ```
 
 ## Data structure
+
+The generator reads quiz questions from `Základní část` and Riskuj data from `Riskuj`.
+Additional tabs are ignored for presentation generation, so helper or planning sheets can exist in the workbook.
 
 ```
 Rounds

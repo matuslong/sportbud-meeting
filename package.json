@@ -1,6 +1,6 @@
 {
   "name": "sportbud-meeting",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Google Apps Script na naplnenie Google Slides prezentacie zo zdrojoveho Google Sheetu pomocou pripravenej Slides sablony.",
   "scripts": {

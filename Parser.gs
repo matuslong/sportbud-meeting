@@ -47,17 +47,17 @@ var QuizParser = (function () {
     var namedSheet;
     var fallbackSheet;
 
-    if (activeSheet && activeSheet.getName() !== QUIZ_CONFIG.RISK.SHEET_NAME) {
-      return activeSheet;
-    }
-
     namedSheet = spreadsheet.getSheetByName(QUIZ_CONFIG.BASE_SHEET_NAME);
-    if (namedSheet && namedSheet.getName() !== QUIZ_CONFIG.RISK.SHEET_NAME) {
+    if (isBaseCandidateSheet(namedSheet)) {
       return namedSheet;
     }
 
+    if (isBaseCandidateSheet(activeSheet)) {
+      return activeSheet;
+    }
+
     fallbackSheet = spreadsheet.getSheets().filter(function (sheet) {
-      return sheet.getName() !== QUIZ_CONFIG.RISK.SHEET_NAME;
+      return isBaseCandidateSheet(sheet);
     })[0];
 
     if (!fallbackSheet) {
@@ -65,6 +65,15 @@ var QuizParser = (function () {
     }
 
     return fallbackSheet;
+  }
+
+  function isBaseCandidateSheet(sheet) {
+    if (!sheet) {
+      return false;
+    }
+
+    return sheet.getName() !== QUIZ_CONFIG.RISK.SHEET_NAME &&
+      sheet.getName() !== QUIZ_CONFIG.STANDINGS.META_SHEET_NAME;
   }
 
   function normalizeRows(values) {
