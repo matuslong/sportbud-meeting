@@ -29,11 +29,13 @@ Google Apps Script utility that generates pub quiz presentations in Google Slide
 
 ## Reference materials
 
+- `documentation/SPORTBUD BRAND PLAYBOOK.docx` is the current brand foundation and onboarding reference for Sportbud positioning, target audience, benefits, tone of voice, and visual source links.
 - `assets/brand/` contains Sportbud brand source materials used for future presentation and product expansion.
 - `assets/brand/brand-colors.md` is the canonical reference for Sportbud brand colors.
 - `assets/others/current_web/` contains screenshots of the current web for visual and UX reference.
 - `assets/others/timers/` contains timer video assets for Riskuj flows.
 - `documentation/` contains supporting product and brand documents:
+  - `SPORTBUD BRAND PLAYBOOK.docx`
   - `BRAND FOUNDATION.docx`
   - `FUTURE VISION & PRODUCT EXPANSION.docx`
   - `WEB & PRODUCT DOCUMENTATION.docx`
