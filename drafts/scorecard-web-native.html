@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sportbud Meeting - Web-Native Scorecard Draft</title>
+  <style>
+    @font-face {
+      font-family: "Be Vietnam Pro";
+      src: url("../assets/brand/fonts/BeVietnamPro/BeVietnamPro-Black.ttf") format("truetype");
+      font-weight: 900;
+    }
+
+    @font-face {
+      font-family: "Be Vietnam Pro";
+      src: url("../assets/brand/fonts/BeVietnamPro/BeVietnamPro-Bold.ttf") format("truetype");
+      font-weight: 700;
+    }
+
+    @font-face {
+      font-family: "Nunito Sans";
+      src: url("../assets/brand/fonts/NunitoSans/NunitoSans_10pt-Regular.ttf") format("truetype");
+      font-weight: 400;
+    }
+
+    @font-face {
+      font-family: "Nunito Sans";
+      src: url("../assets/brand/fonts/NunitoSans/NunitoSans_10pt-Bold.ttf") format("truetype");
+      font-weight: 700;
+    }
+
+    :root {
+      --background: #06091a;
+      --surface: #0a0f2e;
+      --surface-2: #0d1640;
+      --brand-blue: #041562;
+      --brand-sky: #11468f;
+      --brand-red: #ad0000;
+      --red-text: #e03535;
+      --brand-white: #eeeeee;
+      --turquoise: #00ffe7;
+      --line: rgba(255, 255, 255, 0.08);
+      --line-strong: rgba(255, 255, 255, 0.16);
+      --muted: rgba(238, 238, 238, 0.58);
+      --faint: rgba(238, 238, 238, 0.32);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #111;
+      color: var(--brand-white);
+      font-family: "Nunito Sans", Arial, sans-serif;
+    }
+
+    .sheet {
+      position: relative;
+      width: 794px;
+      height: 1123px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 82% 8%, rgba(173, 0, 0, 0.26), transparent 26%),
+        linear-gradient(155deg, rgba(17, 70, 143, 0.28), transparent 42%),
+        var(--background);
+      padding: 42px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+    }
+
+    .shape-left,
+    .shape-right {
+      position: absolute;
+      pointer-events: none;
+      background: var(--brand-red);
+      opacity: 0.22;
+      clip-path: polygon(0 0, 100% 0, 62% 50%, 100% 100%, 0 100%, 38% 50%);
+    }
+
+    .shape-left {
+      left: -86px;
+      top: 122px;
+      width: 180px;
+      height: 520px;
+      background: var(--brand-blue);
+    }
+
+    .shape-right {
+      right: -110px;
+      top: 28px;
+      width: 210px;
+      height: 640px;
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 28px;
+      align-items: start;
+    }
+
+    .logo {
+      width: 224px;
+      height: auto;
+      display: block;
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--red-text);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: "Be Vietnam Pro", Arial, sans-serif;
+      font-size: 58px;
+      line-height: 0.94;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 14px 0 0;
+      max-width: 380px;
+      color: rgba(238, 238, 238, 0.72);
+      font-size: 17px;
+      line-height: 1.35;
+    }
+
+    .event-meta {
+      min-width: 196px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--brand-red);
+      border-radius: 18px;
+      background: rgba(13, 22, 64, 0.86);
+      text-align: right;
+    }
+
+    .event-meta .season {
+      margin: 0 0 7px;
+      color: var(--faint);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .event-meta .round {
+      margin: 0;
+      font-family: "Be Vietnam Pro", Arial, sans-serif;
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .event-meta .venue {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.3;
+    }
+
+    .team-row {
+      display: grid;
+      grid-template-columns: 1fr 164px;
+      gap: 14px;
+    }
+
+    .field-card,
+    .total-card {
+      min-height: 84px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface-2);
+    }
+
+    .label {
+      margin: 0 0 10px;
+      color: var(--faint);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .write-line {
+      height: 26px;
+      border-bottom: 2px solid rgba(238, 238, 238, 0.42);
+    }
+
+    .total-card {
+      border-color: rgba(173, 0, 0, 0.28);
+      background: linear-gradient(180deg, rgba(173, 0, 0, 0.2), rgba(13, 22, 64, 0.92));
+      text-align: center;
+    }
+
+    .total-card .points {
+      font-family: "Be Vietnam Pro", Arial, sans-serif;
+      font-size: 42px;
+      line-height: 0.9;
+      font-weight: 900;
+    }
+
+    .rounds {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .round-card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(13, 22, 64, 0.9);
+    }
+
+    .round-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 15px 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(4, 21, 98, 0.38);
+    }
+
+    .round-title {
+      margin: 0;
+      color: var(--brand-white);
+      font-family: "Be Vietnam Pro", Arial, sans-serif;
+      font-size: 17px;
+      font-weight: 900;
+    }
+
+    .round-score {
+      min-width: 68px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: rgba(173, 0, 0, 0.18);
+      color: var(--red-text);
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .question-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    .q-cell {
+      min-height: 50px;
+      padding: 10px 10px 9px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .q-cell:nth-child(2n) {
+      border-right: 0;
+    }
+
+    .q-cell:nth-last-child(-n + 2) {
+      border-bottom: 0;
+    }
+
+    .q-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      color: var(--faint);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .checkline {
+      height: 15px;
+      border-bottom: 1px solid rgba(238, 238, 238, 0.36);
+    }
+
+    .bonus-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 154px;
+      gap: 14px;
+    }
+
+    .bonus-card {
+      min-height: 110px;
+      padding: 15px;
+      border: 1px solid rgba(0, 255, 231, 0.22);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(0, 255, 231, 0.08), rgba(13, 22, 64, 0.86));
+    }
+
+    .bonus-title {
+      margin: 0 0 14px;
+      color: var(--turquoise);
+      font-family: "Be Vietnam Pro", Arial, sans-serif;
+      font-size: 17px;
+      font-weight: 900;
+    }
+
+    .rank-card {
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+    }
+
+    .rank-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--line);
+      color: rgba(238, 238, 238, 0.78);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .rank-option:last-child {
+      border-bottom: 0;
+    }
+
+    .footer {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding-top: 15px;
+      border-top: 1px solid var(--line);
+      color: rgba(238, 238, 238, 0.46);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .footer strong {
+      color: var(--red-text);
+    }
+
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    @media print {
+      body {
+        background: var(--background);
+      }
+
+      .sheet {
+        width: 210mm;
+        height: 297mm;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="sheet" aria-label="Sportbud Meeting scorecard">
+    <div class="shape-left"></div>
+    <div class="shape-right"></div>
+
+    <div class="content">
+      <header class="header">
+        <div>
+          <img class="logo" src="../assets/brand/logo/meeting_logo_inverted.png" alt="Sportbud Meeting">
+          <p class="eyebrow">Sportbud Meeting</p>
+          <h1>Scorecard</h1>
+          <p class="subtitle">Sportovni pub kviz pro fanousky, kteri chteji sport zazivat i mimo stadion.</p>
+        </div>
+
+        <aside class="event-meta">
+          <p class="season">Sezona 2026/2027</p>
+          <p class="round">1. kolo</p>
+          <p class="venue">Arena Sportbar<br>Brno</p>
+        </aside>
+      </header>
+
+      <section class="team-row">
+        <div class="field-card">
+          <p class="label">Nazev tymu</p>
+          <div class="write-line"></div>
+        </div>
+        <div class="total-card">
+          <p class="label">Celkem</p>
+          <div class="points">__/40</div>
+        </div>
+      </section>
+
+      <section class="rounds">
+        <article class="round-card">
+          <div class="round-head">
+            <h2 class="round-title">1. kolo</h2>
+            <span class="round-score">__/8</span>
+          </div>
+          <div class="question-grid">
+            <div class="q-cell"><div class="q-meta"><span>Otazka 1</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 2</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 3</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 4</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 5</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 6</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 7</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 8</span><span>1 bod</span></div><div class="checkline"></div></div>
+          </div>
+        </article>
+
+        <article class="round-card">
+          <div class="round-head">
+            <h2 class="round-title">2. kolo</h2>
+            <span class="round-score">__/8</span>
+          </div>
+          <div class="question-grid">
+            <div class="q-cell"><div class="q-meta"><span>Otazka 9</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 10</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 11</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 12</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 13</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 14</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 15</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 16</span><span>1 bod</span></div><div class="checkline"></div></div>
+          </div>
+        </article>
+
+        <article class="round-card">
+          <div class="round-head">
+            <h2 class="round-title">3. kolo</h2>
+            <span class="round-score">__/8</span>
+          </div>
+          <div class="question-grid">
+            <div class="q-cell"><div class="q-meta"><span>Otazka 17</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 18</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 19</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 20</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 21</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 22</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 23</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 24</span><span>1 bod</span></div><div class="checkline"></div></div>
+          </div>
+        </article>
+
+        <article class="round-card">
+          <div class="round-head">
+            <h2 class="round-title">4. kolo</h2>
+            <span class="round-score">__/8</span>
+          </div>
+          <div class="question-grid">
+            <div class="q-cell"><div class="q-meta"><span>Otazka 25</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 26</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 27</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 28</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 29</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 30</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 31</span><span>1 bod</span></div><div class="checkline"></div></div>
+            <div class="q-cell"><div class="q-meta"><span>Otazka 32</span><span>1 bod</span></div><div class="checkline"></div></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="bonus-row">
+        <article class="bonus-card">
+          <h2 class="bonus-title">Bonusovy tip</h2>
+          <p class="label">Odpoved</p>
+          <div class="write-line"></div>
+        </article>
+
+        <article class="bonus-card">
+          <h2 class="bonus-title">Pivni bonus</h2>
+          <p class="label">Odpoved</p>
+          <div class="write-line"></div>
+        </article>
+
+        <aside class="rank-card">
+          <p class="label">Soutezni aktivita</p>
+          <div class="rank-option"><span>1. misto</span><span>+3</span></div>
+          <div class="rank-option"><span>2. misto</span><span>+2</span></div>
+          <div class="rank-option"><span>3. misto</span><span>+1</span></div>
+        </aside>
+      </section>
+
+      <footer class="footer">
+        <span><strong>Sdilime tvou sportovni vasen</strong></span>
+        <span>sportbud.cz · @sportbud_cz</span>
+      </footer>
+    </div>
+  </main>
+</body>
+</html>
