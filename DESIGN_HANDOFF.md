@@ -98,3 +98,19 @@ For PDF preview/export from the browser:
 - Should we keep A4 portrait, or create both A4 and A5/table-friendly versions?
 - Should the next pass include a light print variant?
 - Should the presentation template be redesigned directly in Google Slides, in Canva, or first as local HTML mockups?
+
+## Presentation Backgrounds - 2026-08-17
+
+Core presentation background batch is now prepared in `drafts/presentation-backgrounds-core.html` and exported in `drafts/presentation-backgrounds/`.
+
+Current approved files:
+
+- `intro.png`
+- `general.png`
+- `quiz-topic.png`
+- `quiz-question.png`
+- `quiz-question-bonus.png`
+- `quiz-answer.png`
+- `round-standings.png`
+
+Important continuation notes are in `drafts/presentation-backgrounds-handoff.md`. The exported backgrounds intentionally do not bake in question/answer text, standings values, template markers, or the question/answer slide favicon; those should remain native/editable in Google Slides.
