@@ -22,7 +22,7 @@ Design direction stays aligned with `DESIGN_HANDOFF.md`: **Web-Native Quiz Syste
 - Export script: `scripts/export-presentation-backgrounds.ps1`
 - Export target: `drafts/presentation-backgrounds/`
 
-The HTML file includes placeholder text only for approval. The export script opens the same HTML in export mode and hides all text/content overlays, producing clean PNG backgrounds.
+The HTML file includes placeholder text and native-layer mockups only for approval. The export script opens the same HTML in export mode and hides text/content overlays plus the main safe-zone/frame panels, producing clean PNG backgrounds.
 
 ## Asset rules
 
@@ -107,8 +107,8 @@ Riskuj backgrounds must reserve native video/timer space and clickable back/menu
 - Slogan `Sdílíme tvou sportovní vášeň` is shown as a preview placeholder in HTML, but final generated text should stay native in Google Slides.
 - `intro` now uses a larger logo and less text in preview.
 - `general` has a larger content area for longer rules or more bullets.
-- `quiz-question` and `quiz-question-bonus` include larger safe zones, visible question number, and topic label in preview.
-- `quiz-answer` no longer has the X icon; it has preview placeholders for question number, topic/question text, main answer, and a large image-safe area.
+- `quiz-question` and `quiz-question-bonus` include larger safe zones, visible question number, and topic label in preview only; exported PNGs keep these as native Slides layers.
+- `quiz-answer` no longer has the X icon; it has preview placeholders for question number, topic/question text, main answer, and a large image-safe area, all intended as native Slides layers.
 
 ## Next implementation notes
 
