@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sportbud Meeting - promo arena split v3</title>
+  <style>
+    @font-face {
+      font-family: "Be Vietnam Pro";
+      src: url("../assets/brand/fonts/BeVietnamPro/BeVietnamPro-Black.ttf") format("truetype");
+      font-weight: 900;
+    }
+
+    @font-face {
+      font-family: "Be Vietnam Pro";
+      src: url("../assets/brand/fonts/BeVietnamPro/BeVietnamPro-ExtraBold.ttf") format("truetype");
+      font-weight: 800;
+    }
+
+    @font-face {
+      font-family: "Nunito Sans";
+      src: url("../assets/brand/fonts/NunitoSans/NunitoSans_10pt-Regular.ttf") format("truetype");
+      font-weight: 400;
+    }
+
+    @font-face {
+      font-family: "Nunito Sans";
+      src: url("../assets/brand/fonts/NunitoSans/NunitoSans_10pt-Bold.ttf") format("truetype");
+      font-weight: 700;
+    }
+
+    :root {
+      --bg: #06091a;
+      --surface: #0a0f2e;
+      --card: #0d1640;
+      --blue: #041562;
+      --sky: #11468f;
+      --red: #ad0000;
+      --red-text: #e03535;
+      --text: #eeeeee;
+      --muted: rgba(238, 238, 238, 0.72);
+      --line: rgba(238, 238, 238, 0.12);
+      --turquoise: #00ffe7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: #02040d;
+      color: var(--text);
+      font-family: "Nunito Sans", Arial, sans-serif;
+    }
+
+    body {
+      padding: 28px;
+    }
+
+    .gallery {
+      display: grid;
+      gap: 32px;
+      max-width: 1320px;
+      margin: 0 auto;
+    }
+
+    .note {
+      max-width: 920px;
+      color: rgba(238, 238, 238, 0.76);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .note strong {
+      color: var(--text);
+    }
+
+    .promo-shell {
+      display: grid;
+      gap: 10px;
+    }
+
+    .caption {
+      color: rgba(238, 238, 238, 0.72);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .artboard {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      isolation: isolate;
+      background:
+        radial-gradient(circle at 80% 12%, rgba(173, 0, 0, 0.24), transparent 31%),
+        linear-gradient(135deg, rgba(17, 70, 143, 0.2), transparent 42%),
+        var(--bg);
+      box-shadow: 0 24px 90px rgba(0, 0, 0, 0.5);
+    }
+
+    .facebook {
+      aspect-ratio: 1920 / 1005;
+    }
+
+    .instagram {
+      max-width: 720px;
+      aspect-ratio: 1080 / 1350;
+    }
+
+    .photo {
+      position: absolute;
+      inset: 0;
+      z-index: -5;
+      background-image: url("promo-quiz-photo-20260824-10.jpg");
+      background-size: cover;
+      background-position: center 44%;
+      filter: saturate(1.05) contrast(1.06);
+      transform: scale(1.01);
+    }
+
+    .artboard::before,
+    .artboard::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .artboard::before {
+      z-index: -4;
+      background:
+        linear-gradient(90deg, rgba(4, 21, 98, 0.94), rgba(4, 21, 98, 0.68) 41%, rgba(6, 9, 26, 0.82) 71%, rgba(6, 9, 26, 0.96)),
+        linear-gradient(180deg, rgba(6, 9, 26, 0.08), rgba(6, 9, 26, 0.44) 67%, rgba(6, 9, 26, 0.86)),
+        radial-gradient(circle at 28% 30%, rgba(17, 70, 143, 0.32), transparent 30%),
+        radial-gradient(circle at 56% 28%, rgba(173, 0, 0, 0.22), transparent 24%);
+    }
+
+    .artboard::after {
+      z-index: -3;
+      background-image:
+        linear-gradient(rgba(238, 238, 238, 0.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(238, 238, 238, 0.02) 1px, transparent 1px);
+      background-size: 52px 52px;
+      mask-image: linear-gradient(115deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.72) 52%, rgba(0, 0, 0, 0.18));
+    }
+
+    .shape {
+      position: absolute;
+      z-index: -1;
+      pointer-events: none;
+      user-select: none;
+      object-fit: contain;
+      mix-blend-mode: screen;
+      filter: saturate(1.18) contrast(1.06);
+    }
+
+    .shape-main {
+      width: 44%;
+      right: -14%;
+      top: -24%;
+      opacity: 0.52;
+      transform: rotate(-8deg);
+    }
+
+    .shape-detail {
+      width: 23%;
+      left: -7%;
+      bottom: -20%;
+      opacity: 0.26;
+      transform: rotate(13deg);
+    }
+
+    .brand-row {
+      position: absolute;
+      left: 20.2%;
+      right: 18.8%;
+      top: 8%;
+      z-index: 4;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .brand-logo {
+      width: clamp(150px, 13vw, 235px);
+      height: auto;
+      display: block;
+    }
+
+    .signal-pill {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 18px;
+      border: 1px solid rgba(0, 255, 231, 0.34);
+      border-radius: 999px;
+      background: rgba(0, 255, 231, 0.12);
+      color: var(--turquoise);
+      font-size: clamp(12px, 1vw, 16px);
+      font-weight: 900;
+      text-transform: uppercase;
+      white-space: nowrap;
+      backdrop-filter: blur(12px);
+    }
+
+    .copy-block {
+      position: absolute;
+      left: 20.2%;
+      top: 24%;
+      z-index: 4;
+      width: 31.5%;
+      display: grid;
+      gap: 13px;
+    }
+
+    .eyebrow {
+      color: var(--red-text);
+      font-size: clamp(15px, 1.15vw, 21px);
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h1,
+    h2 {
+      font-family: "Be Vietnam Pro", Arial, sans-serif;
+      font-weight: 900;
+      letter-spacing: 0;
+      line-height: 0.96;
+      text-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
+      text-wrap: balance;
+    }
+
+    .facebook h1 {
+      max-width: 590px;
+      font-size: clamp(46px, 4.4vw, 82px);
+    }
+
+    .lead {
+      max-width: 520px;
+      color: rgba(238, 238, 238, 0.8);
+      font-size: clamp(17px, 1.35vw, 25px);
+      font-weight: 700;
+      line-height: 1.22;
+    }
+
+    .event-panel {
+      position: absolute;
+      left: 53.4%;
+      right: 18.8%;
+      top: 19.5%;
+      bottom: 27.5%;
+      z-index: 5;
+      display: grid;
+      align-content: stretch;
+      gap: 16px;
+      padding: clamp(22px, 2.1vw, 34px);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background:
+        linear-gradient(145deg, rgba(13, 22, 64, 0.94), rgba(10, 15, 46, 0.86)),
+        rgba(6, 9, 26, 0.86);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 28px 72px rgba(0, 0, 0, 0.34);
+      backdrop-filter: blur(18px);
+    }
+
+    .event-panel::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 5px;
+      border-radius: 18px 0 0 18px;
+      background: var(--red);
+      box-shadow: 0 0 30px rgba(173, 0, 0, 0.34);
+    }
+
+    .panel-label {
+      color: var(--red-text);
+      font-size: clamp(12px, 0.95vw, 15px);
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .venue {
+      margin-top: 4px;
+      font-family: "Be Vietnam Pro", Arial, sans-serif;
+      font-size: clamp(35px, 3.25vw, 60px);
+      font-weight: 900;
+      line-height: 0.96;
+      text-transform: uppercase;
+    }
+
+    .meta-list {
+      display: grid;
+      gap: 10px;
+      align-self: center;
+    }
+
+    .meta-row {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 13px;
+      align-items: baseline;
+      min-height: 42px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(238, 238, 238, 0.09);
+    }
+
+    .meta-key {
+      color: rgba(238, 238, 238, 0.52);
+      font-size: clamp(11px, 0.85vw, 14px);
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .meta-value {
+      color: var(--text);
+      font-family: "Be Vietnam Pro", Arial, sans-serif;
+      font-size: clamp(19px, 1.45vw, 28px);
+      font-weight: 800;
+      line-height: 1.05;
+    }
+
+    .cta-row {
+      align-self: end;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 48px;
+      padding-top: 4px;
+    }
+
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 18px;
+      border-radius: 999px;
+      background: var(--turquoise);
+      color: var(--blue);
+      font-size: clamp(12px, 0.9vw, 15px);
+      font-weight: 900;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .web {
+      color: rgba(238, 238, 238, 0.72);
+      font-size: clamp(12px, 0.9vw, 15px);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .side-proof {
+      position: absolute;
+      left: 20.2%;
+      right: 18.8%;
+      bottom: 12.5%;
+      z-index: 4;
+      display: grid;
+      grid-template-columns: 46px minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+      color: rgba(238, 238, 238, 0.72);
+      font-size: clamp(14px, 1.05vw, 18px);
+      font-weight: 700;
+      line-height: 1.22;
+    }
+
+    .proof-mark {
+      width: 46px;
+      height: 4px;
+      margin-top: 8px;
+      border-radius: 999px;
+      background: var(--red);
+    }
+
+    .safe-zone-guide,
+    .bottom-risk-guide {
+      display: none;
+      position: absolute;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .safe-zone-guide {
+      left: 18.75%;
+      top: 0;
+      width: 62.5%;
+      height: 100%;
+      border: 2px dashed rgba(0, 255, 231, 0.66);
+      background: rgba(0, 255, 231, 0.035);
+    }
+
+    .safe-zone-guide::before {
+      content: "FB mobile safe zone";
+      position: absolute;
+      left: 18px;
+      top: 16px;
+      color: var(--turquoise);
+      font-size: 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .bottom-risk-guide {
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 26%;
+      background: rgba(173, 0, 0, 0.14);
+      border-top: 2px dashed rgba(224, 53, 53, 0.74);
+    }
+
+    .bottom-risk-guide::before {
+      content: "low-priority zone: possible FB UI overlay";
+      position: absolute;
+      right: 18px;
+      top: 14px;
+      color: #ff7777;
+      font-size: 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    body.show-guides .safe-zone-guide,
+    body.show-guides .bottom-risk-guide {
+      display: block;
+    }
+
+    .instagram::before {
+      background:
+        linear-gradient(180deg, rgba(4, 21, 98, 0.56), rgba(4, 21, 98, 0.28) 38%, rgba(6, 9, 26, 0.96) 72%),
+        linear-gradient(90deg, rgba(6, 9, 26, 0.66), rgba(6, 9, 26, 0.12), rgba(6, 9, 26, 0.62)),
+        radial-gradient(circle at 74% 34%, rgba(173, 0, 0, 0.24), transparent 28%);
+    }
+
+    .instagram .shape-main {
+      width: 82%;
+      right: -37%;
+      top: 14%;
+      opacity: 0.34;
+    }
+
+    .instagram .brand-row {
+      left: 7%;
+      right: 7%;
+      top: 5.2%;
+    }
+
+    .instagram .brand-logo {
+      width: 235px;
+      max-width: 54%;
+    }
+
+    .instagram .copy-block {
+      left: 7%;
+      right: 7%;
+      top: 36%;
+      width: auto;
+      max-width: none;
+      gap: 12px;
+    }
+
+    .instagram h1 {
+      max-width: 780px;
+      font-size: clamp(56px, 9vw, 96px);
+    }
+
+    .instagram .lead {
+      max-width: 640px;
+      font-size: clamp(20px, 3vw, 29px);
+    }
+
+    .instagram .event-panel {
+      left: 7%;
+      right: 7%;
+      top: auto;
+      bottom: 7%;
+      min-height: 33%;
+      gap: 18px;
+      padding: 28px;
+    }
+
+    .instagram .event-panel::before {
+      width: auto;
+      height: 5px;
+      inset: 0 0 auto 0;
+      border-radius: 18px 18px 0 0;
+    }
+
+    .venue-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .venue-card {
+      min-height: 166px;
+      display: grid;
+      gap: 9px;
+      align-content: start;
+      padding: 18px;
+      border: 1px solid rgba(238, 238, 238, 0.12);
+      border-radius: 14px;
+      background: rgba(238, 238, 238, 0.045);
+    }
+
+    .venue-card strong {
+      font-family: "Be Vietnam Pro", Arial, sans-serif;
+      font-size: clamp(24px, 4.8vw, 37px);
+      font-weight: 900;
+      line-height: 0.98;
+      text-transform: uppercase;
+    }
+
+    .venue-card span {
+      color: rgba(238, 238, 238, 0.72);
+      font-size: clamp(15px, 2.7vw, 20px);
+      font-weight: 800;
+      line-height: 1.18;
+    }
+
+    .instagram .venue,
+    .instagram .meta-list,
+    .instagram .side-proof {
+      display: none;
+    }
+
+    .instagram .cta-row {
+      padding-top: 0;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        padding: 16px;
+      }
+
+      .facebook {
+        aspect-ratio: 1080 / 1350;
+      }
+
+      .facebook .brand-row,
+      .facebook .copy-block,
+      .facebook .event-panel,
+      .facebook .side-proof {
+        left: 7%;
+        right: 7%;
+      }
+
+      .facebook .brand-row {
+        top: 5.2%;
+      }
+
+      .facebook .copy-block {
+        top: 32%;
+        width: auto;
+      }
+
+      .facebook h1 {
+        font-size: clamp(52px, 9vw, 88px);
+      }
+
+      .facebook .event-panel {
+        top: auto;
+        bottom: 7%;
+      }
+
+      .facebook .side-proof {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="gallery" aria-label="Sportbud Meeting promo arena split v3">
+    <p class="note">
+      <strong>V3:</strong> návrat k prvému split konceptu, ale kritický obsah je posunutý do centrálnej FB safe zóny. Reálna fotka má výrazný brand-blue overlay pre čitateľnosť. Ochranné zóny zobrazíš cez <strong>?guides=1</strong>.
+    </p>
+
+    <section class="promo-shell">
+      <div class="caption">FB event cover - Rubín / 1920 x 1005</div>
+      <article class="artboard facebook">
+        <div class="photo" aria-hidden="true"></div>
+        <img class="shape shape-main" src="../assets/brand/shape assets/rectangle_shape.png" alt="">
+        <img class="shape shape-detail" src="../assets/brand/shape assets/detail_red.png" alt="">
+        <div class="brand-row">
+          <img class="brand-logo" src="../assets/brand/logo/meeting_logo_inverted.png" alt="Sportbud Meeting">
+          <div class="signal-pill">Nový tým poprvé zdarma</div>
+        </div>
+        <div class="copy-block">
+          <div class="eyebrow">Sportovní pub kvíz v Brně</div>
+          <h1>Fotbalový speciál</h1>
+          <p class="lead">Slož tým 3-8 hráčů a přijď zažít sport mimo stadion.</p>
+        </div>
+        <aside class="event-panel" aria-label="Event details">
+          <div>
+            <div class="panel-label">Facebook event</div>
+            <div class="venue">Rubín</div>
+          </div>
+          <div class="meta-list">
+            <div class="meta-row">
+              <div class="meta-key">Datum</div>
+              <div class="meta-value">Doplň datum</div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-key">Start</div>
+              <div class="meta-value">19:00</div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-key">Místo</div>
+              <div class="meta-value">Brno</div>
+            </div>
+          </div>
+          <div class="cta-row">
+            <div class="cta">Rezervuj místo</div>
+            <div class="web">sportbud.cz</div>
+          </div>
+        </aside>
+        <div class="side-proof">
+          <span class="proof-mark"></span>
+          <span>První kvíz je pro nové týmy zdarma. Přijď si to vyzkoušet bez závazku.</span>
+        </div>
+        <div class="safe-zone-guide"></div>
+        <div class="bottom-risk-guide"></div>
+      </article>
+    </section>
+
+    <section class="promo-shell">
+      <div class="caption">FB event cover - Aréna / 1920 x 1005</div>
+      <article class="artboard facebook">
+        <div class="photo" aria-hidden="true"></div>
+        <img class="shape shape-main" src="../assets/brand/shape assets/rectangle_shape.png" alt="">
+        <img class="shape shape-detail" src="../assets/brand/shape assets/detail_lightblue.png" alt="">
+        <div class="brand-row">
+          <img class="brand-logo" src="../assets/brand/logo/meeting_logo_inverted.png" alt="Sportbud Meeting">
+          <div class="signal-pill">Nový tým poprvé zdarma</div>
+        </div>
+        <div class="copy-block">
+          <div class="eyebrow">Sportovní pub kvíz v Brně</div>
+          <h1>Fotbalový speciál</h1>
+          <p class="lead">Parta, rivalita, férové otázky a večer pro sportovní fanoušky.</p>
+        </div>
+        <aside class="event-panel" aria-label="Event details">
+          <div>
+            <div class="panel-label">Facebook event</div>
+            <div class="venue">Aréna</div>
+          </div>
+          <div class="meta-list">
+            <div class="meta-row">
+              <div class="meta-key">Datum</div>
+              <div class="meta-value">Doplň datum</div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-key">Start</div>
+              <div class="meta-value">19:00</div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-key">Místo</div>
+              <div class="meta-value">Brno</div>
+            </div>
+          </div>
+          <div class="cta-row">
+            <div class="cta">Rezervuj místo</div>
+            <div class="web">sportbud.cz</div>
+          </div>
+        </aside>
+        <div class="side-proof">
+          <span class="proof-mark"></span>
+          <span>První kvíz je pro nové týmy zdarma. Přijď si to vyzkoušet bez závazku.</span>
+        </div>
+        <div class="safe-zone-guide"></div>
+        <div class="bottom-risk-guide"></div>
+      </article>
+    </section>
+
+    <section class="promo-shell">
+      <div class="caption">Instagram post - Brno / 1080 x 1350</div>
+      <article class="artboard instagram">
+        <div class="photo" aria-hidden="true"></div>
+        <img class="shape shape-main" src="../assets/brand/shape assets/rectangle_shape.png" alt="">
+        <img class="shape shape-detail" src="../assets/brand/shape assets/detail_red.png" alt="">
+        <div class="brand-row">
+          <img class="brand-logo" src="../assets/brand/logo/meeting_logo_inverted.png" alt="Sportbud Meeting">
+          <div class="signal-pill">Poprvé zdarma</div>
+        </div>
+        <div class="copy-block">
+          <div class="eyebrow">Dva termíny / jedna liga</div>
+          <h1>Fotbalový speciál</h1>
+          <p class="lead">Vyber místo, slož tým a přijď si zahrát.</p>
+        </div>
+        <aside class="event-panel" aria-label="Instagram event details">
+          <div>
+            <div class="panel-label">Nové kvízy v Brně</div>
+            <div class="venue">Brno</div>
+          </div>
+          <div class="venue-grid">
+            <div class="venue-card">
+              <strong>Rubín</strong>
+              <span>Doplň datum</span>
+              <span>19:00</span>
+            </div>
+            <div class="venue-card">
+              <strong>Aréna</strong>
+              <span>Doplň datum</span>
+              <span>19:00</span>
+            </div>
+          </div>
+          <div class="meta-list"></div>
+          <div class="cta-row">
+            <div class="cta">Rezervuj místo</div>
+            <div class="web">@sportbud.cz</div>
+          </div>
+        </aside>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("guides") === "1") {
+      document.body.classList.add("show-guides");
+    }
+  </script>
+</body>
+</html>

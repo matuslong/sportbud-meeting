@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sportbud Meeting - Canva transparent overlays</title>
+  <style>
+    :root {
+      --bg: #06091a;
+      --blue: #041562;
+      --sky: #11468f;
+      --red: #ad0000;
+      --text: #eeeeee;
+      --turquoise: #00ffe7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: #02040d;
+    }
+
+    body {
+      padding: 28px;
+    }
+
+    body.export-mode {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      padding: 0;
+      background: transparent;
+    }
+
+    .gallery {
+      display: grid;
+      gap: 30px;
+      max-width: 1320px;
+      margin: 0 auto;
+    }
+
+    body.export-mode .gallery {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      max-width: none;
+      margin: 0;
+    }
+
+    .shell {
+      display: grid;
+      gap: 10px;
+    }
+
+    body.export-mode .shell {
+      display: none;
+    }
+
+    body.export-mode .shell.active {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .caption {
+      color: rgba(238, 238, 238, 0.72);
+      font: 700 13px Arial, sans-serif;
+      text-transform: uppercase;
+    }
+
+    body.export-mode .caption {
+      display: none;
+    }
+
+    .artboard {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      isolation: isolate;
+      background: transparent;
+      box-shadow: 0 24px 90px rgba(0, 0, 0, 0.5);
+    }
+
+    body.export-mode .artboard {
+      width: 100vw;
+      height: 100vh;
+      max-width: none;
+      aspect-ratio: auto;
+      box-shadow: none;
+    }
+
+    .facebook {
+      aspect-ratio: 1920 / 1005;
+    }
+
+    .instagram {
+      max-width: 720px;
+      aspect-ratio: 1080 / 1350;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .facebook .overlay {
+      background:
+        linear-gradient(90deg, rgba(4, 21, 98, 0.94), rgba(4, 21, 98, 0.72) 42%, rgba(6, 9, 26, 0.82) 72%, rgba(6, 9, 26, 0.96)),
+        linear-gradient(180deg, rgba(6, 9, 26, 0.1), rgba(6, 9, 26, 0.42) 68%, rgba(6, 9, 26, 0.86)),
+        radial-gradient(circle at 28% 30%, rgba(17, 70, 143, 0.34), transparent 30%),
+        radial-gradient(circle at 56% 28%, rgba(173, 0, 0, 0.22), transparent 24%);
+    }
+
+    .instagram .overlay {
+      background:
+        linear-gradient(180deg, rgba(4, 21, 98, 0.58), rgba(4, 21, 98, 0.3) 38%, rgba(6, 9, 26, 0.96) 72%),
+        linear-gradient(90deg, rgba(6, 9, 26, 0.66), rgba(6, 9, 26, 0.12), rgba(6, 9, 26, 0.62)),
+        radial-gradient(circle at 74% 34%, rgba(173, 0, 0, 0.24), transparent 28%);
+    }
+
+    .grid {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(238, 238, 238, 0.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(238, 238, 238, 0.02) 1px, transparent 1px);
+      background-size: 52px 52px;
+      mask-image: linear-gradient(115deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.72) 52%, rgba(0, 0, 0, 0.18));
+    }
+
+    .shape {
+      position: absolute;
+      z-index: 2;
+      pointer-events: none;
+      user-select: none;
+      object-fit: contain;
+      mix-blend-mode: screen;
+      filter: saturate(1.18) contrast(1.06);
+    }
+
+    .shape-main {
+      width: 44%;
+      right: -14%;
+      top: -24%;
+      opacity: 0.52;
+      transform: rotate(-8deg);
+    }
+
+    .shape-detail {
+      width: 23%;
+      left: -7%;
+      bottom: -20%;
+      opacity: 0.26;
+      transform: rotate(13deg);
+    }
+
+    .instagram .shape-main {
+      width: 82%;
+      right: -37%;
+      top: 14%;
+      opacity: 0.34;
+    }
+  </style>
+</head>
+<body>
+  <main class="gallery" aria-label="Sportbud Meeting transparent overlay layers">
+    <section class="shell" data-artboard-id="fb-rubin">
+      <div class="caption">FB Rubín transparent overlay</div>
+      <article class="artboard facebook">
+        <div class="overlay"></div>
+        <div class="grid"></div>
+        <img class="shape shape-main" src="../assets/brand/shape assets/rectangle_shape.png" alt="">
+        <img class="shape shape-detail" src="../assets/brand/shape assets/detail_red.png" alt="">
+      </article>
+    </section>
+
+    <section class="shell" data-artboard-id="fb-arena">
+      <div class="caption">FB Aréna transparent overlay</div>
+      <article class="artboard facebook">
+        <div class="overlay"></div>
+        <div class="grid"></div>
+        <img class="shape shape-main" src="../assets/brand/shape assets/rectangle_shape.png" alt="">
+        <img class="shape shape-detail" src="../assets/brand/shape assets/detail_lightblue.png" alt="">
+      </article>
+    </section>
+
+    <section class="shell" data-artboard-id="ig-brno">
+      <div class="caption">IG Brno transparent overlay</div>
+      <article class="artboard instagram">
+        <div class="overlay"></div>
+        <div class="grid"></div>
+        <img class="shape shape-main" src="../assets/brand/shape assets/rectangle_shape.png" alt="">
+        <img class="shape shape-detail" src="../assets/brand/shape assets/detail_red.png" alt="">
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const artboardId = window.location.hash.replace("#", "");
+
+    if (params.get("export") === "1") {
+      document.body.classList.add("export-mode");
+      const target = document.querySelector(`[data-artboard-id="${artboardId}"]`);
+      if (target) {
+        target.classList.add("active");
+      }
+    }
+  </script>
+</body>
+</html>
