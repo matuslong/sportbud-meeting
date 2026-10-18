@@ -31,7 +31,14 @@ Editor je dostupný v Sanity Studio ako `Databáza otázok` (`/studio/quiz-bank`
 Supabase magic link a prístup má iba e-mail uvedený v tabuľke `quiz_admins`. Vyhľadávanie zabezpečuje
 funkcia `search_quiz_bank(...)` cez uložené štítky, full-text a trigram podobnosť.
 
-## Nasledujúce kroky
+## Stav klasifikácie (18. 10. 2026)
+
+Prvých 140 otázok oštítkoval Codex. Zvyšok štítkuje autonómne Claude Sonnet 5.5 cez
+`npm run quiz:classify:claude` v `sportbud-web` (headless `claude -p` bez nástrojov, bez API kľúča a bez
+potreby schvaľovania). Checkpoint je databáza; pri vyčerpaní limitu runner sám počká a pokračuje.
+Podrobnosti sú v `QUIZ_QUESTION_BANK.md`.
+
+## Pôvodný plán
 
 Zvolený postup nevyžaduje OpenAI API key. Codex načíta všetkých 1 990 kanonických otázok zo Supabase
 po ohraničených dávkach, priamo ich klasifikuje podľa riadenej taxonómie a priebežne zapíše výsledky
